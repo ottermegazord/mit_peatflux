@@ -51,23 +51,3 @@ class Valve:
         time.sleep(interval)
         GPIO.output(self.SWITCH_CLOSE, GPIO.HIGH)
 
-    def three_way(self, channel, state):
-        channel_bits = self.int2bin(channel)
-        if state == 'TRUE':
-            for i in range(0, 4):
-                if channel_bits[i] == '1':
-                    # print("HIGH")
-                    GPIO.output(self.open_chan_list[i], GPIO.HIGH)
-                elif channel_bits[i] == '0':
-                    # print("LOW")
-                    GPIO.output(self.open_chan_list[i], GPIO.LOW)
-
-        if state == 'FALSE':
-            for i in range(0, 4):
-                if channel_bits[i] == '1':
-                    # print("HIGH")
-                    GPIO.output(self.close_chan_list[i], GPIO.HIGH)
-                elif channel_bits[i] == '0':
-                    # print("LOW")
-                    GPIO.output(self.close_chan_list[i], GPIO.LOW)
-

@@ -1,0 +1,39 @@
+import RPi.GPIO as GPIO
+import time
+ 
+
+"""Functions"""
+
+def setup_mux_gpiobit(GPIO3, GPIO2, GPIO1, GPIO0):
+	GPIO.setmode(GPIO.BOARD)
+	chan_list = [GPIO3, GPIO2, GPIO1, GPIO0]
+	GPIO.setup(chan_list, GPIO.OUT)
+
+def int2bin(n, count = 4):
+	if ((n > 15) | (n < 0)) :
+		print("Number out of range")
+		raise;
+	else:
+		return "".join([str((n >> y) & 1) for y in range (count -1, -1, -1)])
+
+def mux_channel(channel, GPIO3, GPIO2, GPIO1, GPIO0):
+	channel_bits = int2bin(channel)
+	chan_list = [G
+	for i in range(0,3)
+	if channel_bits[0] == TRUE:
+		GPIO.OUTPUT(GPIO0, GPIO.HIGH)
+	if channel_bits[1] == TRUE
+	
+
+
+#def mux_channel(binary, GPIO3, GPIO2, GPIO1, GPIO0):
+	
+#	return list
+
+GPIO3 = 31
+GPIO2 = 33
+GPIO1 = 35
+GPIO0 = 37
+
+setup_mux_gpiobit(GPIO3, GPIO2, GPIO1, GPIO0)
+GPIO.cleanup()

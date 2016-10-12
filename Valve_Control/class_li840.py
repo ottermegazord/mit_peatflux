@@ -20,14 +20,12 @@ class li840:
         data_element = doc.find('data')
         datetimer = etree.SubElement(data_element, 'datetime')
         datetimer.text = datetime.datetime.now().isoformat()
-	#print(datetimer.text)
-	#print(doc)
         return doc
 
     def li840_pullnow(self, li840_raw, li840_timed):
         f1 = open(li840_raw, 'w')
         serial_output = self.li840_readline()
-	serial_output_eol = serial_output + '\n'
+        serial_output_eol = serial_output + '\n'
         f1.write(serial_output_eol)
         f1.close()
 

@@ -1,7 +1,4 @@
 import serial
-import datetime
-import time
-import os
 import xmlformatter
 from lxml import etree
 
@@ -34,4 +31,3 @@ class li840:
         f2.write('\n')
         f2.close()
 
-        

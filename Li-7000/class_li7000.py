@@ -23,7 +23,7 @@ class li7000:
     def li7000_pollnow(self):
         self.ser.flushInput()
         self.ser.flushOutput()
-        time.sleep(0.1)
+        #time.sleep(0.1)
         self.ser.write(bytes("(RS232(Poll Now))\n".encode()))
         for i in range(0, 3):
             if i == 2:
@@ -133,11 +133,11 @@ class li7000:
         print("Zero H20 in Cell A completed \n")
         print("Matching H2O in Cell A and B \n")
         self.li7000_matchH2O()
-        time.sleep(2)
+	time.sleep(2)
         print("Matching H2O in Cell A and B completed \n")
         print("Spanning H2O in Cell B for %.3f minutes\n" % h2o_span_interval)
         self.li7000_spanh2o(h2o_span, h2o_span_interval)
-        time.sleep(2)
+	time.sleep(2)
         print("Spanning H2O in Cell B completed \n")
         print("Zeroing CO2 in Cell A for %.3f minutes\n" % co2_zero_interval)
         self.li7000_zeroco2(co2_zero_interval)

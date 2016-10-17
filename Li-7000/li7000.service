@@ -1,0 +1,11 @@
+[Unit]
+Description=peatflux-code/li7000
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python /home/pi/Desktop/peatflux-code/Li-7000/li7000.py
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

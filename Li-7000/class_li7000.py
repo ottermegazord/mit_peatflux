@@ -3,11 +3,24 @@
 
 import serial
 import time
+import datetime
 
 
 class li7000:
-    def __init__(self, port, baudrate, time):
+    def __init__(self, port, baudrate, time, log_txt, cal_txt):
         self.ser = serial.Serial(port, baudrate, timeout=time)
+        self.log_txt = log_txt
+        self.cal_txt = cal_txt
+
+    def li7000_writelog(self, stringer):
+        log = open(self.log_txt, 'a')
+        log.write(stringer)
+        log.close()
+
+    def li7000_writecal(self, stringer):
+        cal = open(self.cal_txt, 'a')
+        cal.write(stringer)
+        cal.close()
 
     def li7000_readline(self):
         output = self.ser.readline()
@@ -24,7 +37,7 @@ class li7000:
     def li7000_pollnow(self):
         self.ser.flushInput()
         self.ser.flushOutput()
-        #time.sleep(0.1)
+        # time.sleep(0.1)
         self.ser.write(bytes("(RS232(Poll Now))\n".encode()))
         for i in range(0, 3):
             if i == 2:
@@ -71,7 +84,9 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            print(self.li7000_pollnow())
+            poll = self.li7000_pollnow() + '\n'
+            print(poll)
+            self.li7000_writelog(poll)
         self.ser.write(bytes("(UserCal (H2O (CellA-mm/m 0)))\n".encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -90,7 +105,9 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            print(self.li7000_pollnow())
+            poll = self.li7000_pollnow() + '\n'
+            print(poll)
+            self.li7000_writelog(poll)
         str = "(UserCal (H2O (CellB-mm/m %.3f)))\n" % (span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
@@ -102,7 +119,9 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            print(self.li7000_pollnow())
+            poll = self.li7000_pollnow() + '\n'
+            print(poll)
+            self.li7000_writelog(poll)
         self.ser.write(bytes("(UserCal (CO2 (CellA-um/m 0)))\n".encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -113,7 +132,9 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            print(self.li7000_pollnow())
+            poll = self.li7000_pollnow() + '\n'
+            print(poll)
+            self.li7000_writelog(poll)
         str = "(UserCal (CO2 (CellB-um/m %.3f)))\n" % (span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
@@ -128,7 +149,9 @@ class li7000:
         output = self.li7000_readline()
         return output
 
-    def li7000_calibration(self, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_ref, co2_span):
+    def li7000_calibration(self, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span,
+                           co2_ref, co2_span):
+        self.li7000_writecal(datetime.datetime.now().isoformat() + '\n')
         print("Initiate Calibration\n")
         print("Reference H20: Dry CO2: %.3f" % co2_ref)
         self.li7000_setreference("mm/m", 0, co2_ref)
@@ -138,11 +161,11 @@ class li7000:
         print("Zero H20 in Cell A completed \n")
         print("Matching H2O in Cell A and B \n")
         self.li7000_matchH2O()
-	time.sleep(2)
+        time.sleep(2)
         print("Matching H2O in Cell A and B completed \n")
         print("Spanning H2O in Cell B for %.3f minutes\n" % h2o_span_interval)
         self.li7000_spanh2o(h2o_span, h2o_span_interval)
-	time.sleep(2)
+        time.sleep(2)
         print("Spanning H2O in Cell B completed \n")
         print("Zeroing CO2 in Cell A for %.3f minutes\n" % co2_zero_interval)
         self.li7000_zeroco2(co2_zero_interval)
@@ -157,4 +180,3 @@ class li7000:
         time.sleep(2)
         print("Spanning CO2 in Cell B completed \n")
         print("Calibration complete!")
-

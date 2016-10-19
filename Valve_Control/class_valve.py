@@ -5,14 +5,18 @@ import serial
 import datetime
 
 class Valve:
-    def __init__(self, open_chan_list, close_chan_list):
+    def __init__(self, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list):
         self.open_chan_list = open_chan_list
         self.close_chan_list = close_chan_list
+	self.SWITCH_OPEN = SWITCH_OPEN
+	self.SWITCH_CLOSE = SWITCH_CLOSE
 
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
         GPIO.setup(self.open_chan_list, GPIO.OUT)
         GPIO.setup(self.close_chan_list, GPIO.OUT)
+	GPIO.setup(SWITCH_OPEN, GPIO.OUT)
+	GPIO.setup(SWITCH_CLOSE, GPIO.OUT)
 
     def int2bin(self, n, count = 4):
         if (n > 16) | (n < 0):
@@ -21,7 +25,7 @@ class Valve:
         else:
             return "".join([str((n >> y) & 1) for y in range(count - 1, -1, -1)])
 
-    def open_valve_channel(self, channel):
+    def open_valve_channel(self, channel, interval):
         channel_bits = self.int2bin(channel)
         # print(channel_bits)
         for i in range(0, 4):
@@ -31,3 +35,8 @@ class Valve:
             elif channel_bits[i] == '0':
                 # print("LOW")
                 GPIO.output(self.open_chan_list[i], GPIO.LOW)
+	GPIO.output(self.SWITCH_OPEN, GPIO.LOW)
+	time.sleep(interval)
+	GPIO.output(self.SWITCH_OPEN, GPIO.HIGH)
+	
+

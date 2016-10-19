@@ -68,8 +68,9 @@ class li7000:
     def li7000_zeroh2o(self, span_interval):
         self.ser.flushInput()
         self.ser.flushOutput()
-        span_interval_sec = span_interval * 60
-        time.sleep(span_interval_sec)
+        t_end = time.time() + span_interval * 60
+        while time.time() < t_end:
+            self.li7000_pollnow()
         self.ser.write(bytes("(UserCal (H2O (CellA-mm/m 0)))\n".encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -86,8 +87,9 @@ class li7000:
     def li7000_spanh2o(self, span, span_interval):
         self.ser.flushInput()
         self.ser.flushOutput()
-        span_interval_sec = span_interval * 60
-        time.sleep(span_interval_sec)
+        t_end = time.time() + span_interval * 60
+        while time.time() < t_end:
+            self.li7000_pollnow()
         str = "(UserCal (H2O (CellB-mm/m %.3f)))\n" % (span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
@@ -97,8 +99,9 @@ class li7000:
     def li7000_zeroco2(self, span_interval):
         self.ser.flushInput()
         self.ser.flushOutput()
-        span_interval_sec = span_interval * 60
-        time.sleep(span_interval_sec)
+        t_end = time.time() + span_interval * 60
+        while time.time() < t_end:
+            self.li7000_pollnow()
         self.ser.write(bytes("(UserCal (CO2 (CellA-um/m 0)))\n".encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -107,8 +110,9 @@ class li7000:
     def li7000_spanco2(self, span, span_interval):
         self.ser.flushInput()
         self.ser.flushOutput()
-        span_interval_sec = span_interval * 60
-        time.sleep(span_interval_sec)
+        t_end = time.time() + span_interval * 60
+        while time.time() < t_end:
+            self.li7000_pollnow()
         str = "(UserCal (CO2 (CellB-um/m %.3f)))\n" % (span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)

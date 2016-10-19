@@ -1,0 +1,52 @@
+import RPi.GPIO as GPIO
+import time
+
+
+class Valve:
+    def __init__(self, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list):
+        self.open_chan_list = open_chan_list
+        self.close_chan_list = close_chan_list
+        self.SWITCH_OPEN = SWITCH_OPEN
+        self.SWITCH_CLOSE = SWITCH_CLOSE
+
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setwarnings(False)
+        GPIO.setup(self.open_chan_list, GPIO.OUT)
+        GPIO.setup(self.close_chan_list, GPIO.OUT)
+        GPIO.setup(SWITCH_OPEN, GPIO.OUT)
+        GPIO.setup(SWITCH_CLOSE, GPIO.OUT)
+
+    def int2bin(self, n, count=4):
+        if (n > 16) | (n < 0):
+            print("Number out of range")
+            raise
+        else:
+            return "".join([str((n >> y) & 1) for y in range(count - 1, -1, -1)])
+
+    def open_valve_channel(self, channel, interval):
+        channel_bits = self.int2bin(channel)
+        # print(channel_bits)
+        for i in range(0, 4):
+            if channel_bits[i] == '1':
+                # print("HIGH")
+                GPIO.output(self.open_chan_list[i], GPIO.HIGH)
+            elif channel_bits[i] == '0':
+                # print("LOW")
+                GPIO.output(self.open_chan_list[i], GPIO.LOW)
+        GPIO.output(self.SWITCH_OPEN, GPIO.LOW)
+        time.sleep(interval)
+        GPIO.output(self.SWITCH_OPEN, GPIO.HIGH)
+
+    def close_valve_channel(self, channel, interval):
+        channel_bits = self.int2bin(channel)
+        # print(channel_bits)
+        for i in range(0, 4):
+            if channel_bits[i] == '1':
+                # print("HIGH")
+                GPIO.output(self.close_chan_list[i], GPIO.HIGH)
+            elif channel_bits[i] == '0':
+                # print("LOW")
+                GPIO.output(self.close_chan_list[i], GPIO.LOW)
+        GPIO.output(self.SWITCH_CLOSE, GPIO.LOW)
+        time.sleep(interval)
+        GPIO.output(self.SWITCH_CLOSE, GPIO.HIGH)

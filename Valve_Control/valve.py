@@ -13,4 +13,6 @@ SWITCH_INTERVAL = 0.5
 
 valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
-valve.open_valve_channel(2, SWITCH_INTERVAL)
+while 1:
+	valve.open_valve_channel(2, SWITCH_INTERVAL)
+	valve.close_valve_channel(2, SWITCH_INTERVAL)

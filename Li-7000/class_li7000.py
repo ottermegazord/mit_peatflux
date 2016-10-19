@@ -1,4 +1,5 @@
-# !/usr/bin/python  # Filename: class_li7000.py
+# !/usr/bin/python
+#  Filename: class_li7000.py
 
 import serial
 import time

@@ -70,7 +70,7 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            self.li7000_pollnow()
+            print(self.li7000_pollnow())
         self.ser.write(bytes("(UserCal (H2O (CellA-mm/m 0)))\n".encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -89,7 +89,7 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            self.li7000_pollnow()
+            print(self.li7000_pollnow())
         str = "(UserCal (H2O (CellB-mm/m %.3f)))\n" % (span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
@@ -101,7 +101,7 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            self.li7000_pollnow()
+            print(self.li7000_pollnow())
         self.ser.write(bytes("(UserCal (CO2 (CellA-um/m 0)))\n".encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -112,7 +112,7 @@ class li7000:
         self.ser.flushOutput()
         t_end = time.time() + span_interval * 60
         while time.time() < t_end:
-            self.li7000_pollnow()
+            print(self.li7000_pollnow())
         str = "(UserCal (CO2 (CellB-um/m %.3f)))\n" % (span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)

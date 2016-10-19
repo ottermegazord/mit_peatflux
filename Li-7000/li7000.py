@@ -11,13 +11,13 @@ baudrate = 115200
 timeout = 1
 
 """Calibration Constants"""
-h2o_zero_interval = 0.5
-h2o_span_interval = 0.5
-co2_zero_interval = 0.5
-co2_span_interval = 0.5
-h2o_span = 3
-co2_ref = 3
-co2_span = 3
+h2o_zero_interval = 0.2
+h2o_span_interval = 0.2
+co2_zero_interval = 0.2
+co2_span_interval = 0.2
+h2o_span = 1
+co2_ref = 1
+co2_span = 1
 
 """Log Files"""
 log_txt = '/home/pi/Desktop/peatflux-code/Li-7000/log.txt'

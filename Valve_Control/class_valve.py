@@ -9,6 +9,11 @@ class Valve:
         self.open_chan_list = open_chan_list
         self.close_chan_list = close_chan_list
 
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setwarnings(False)
+        GPIO.setup(self.open_chan_list, GPIO.OUT)
+        GPIO.setup(self.close_chan_list, GPIO.OUT)
+
     def int2bin(self, n, count = 4):
         if (n > 16) | (n < 0):
             print("Number out of range")

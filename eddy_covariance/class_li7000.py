@@ -184,15 +184,19 @@ class li7000:
 
         """Spanning Cell B"""
 
-        print("Spanning H2O in Cell B for %.3f minutes\n" % h2o_span_interval)
-        self.valve.open_valve_channel(calib_channels[1], 0.25)
-        self.li7000_spanh2o(h2o_span, h2o_span_interval)
-        time.sleep(2)
-        print("Spanning H2O in Cell B completed \n")
+        for i in range(0, len(co2_span)):
 
-        print("Spanning CO2 in Cell B for %.3f minutes\n" % co2_span_interval)
-        self.li7000_spanco2(co2_span, co2_span_interval)
-        time.sleep(2)
-        self.valve.close_valve_channel(calib_channels[1], 0.25)
-        print("Spanning CO2 in Cell B completed \n")
+            print("Spanning %.3f H2O in Cell B for %.3f minutes\n" % (h2o_span[i], h2o_span_interval))
+            self.valve.open_valve_channel(calib_channels[i+1], 0.25)
+            self.li7000_spanh2o(h2o_span[i], h2o_span_interval)
+            time.sleep(2)
+            print("Spanning %.3f H2O in Cell B completed \n" % h2o_span[i])
+
+            print("Spanning %.3f CO2 in Cell B for %.3f minutes\n" % (co2_span[i], co2_span_interval))
+            self.li7000_spanco2(co2_span[i], co2_span_interval)
+            time.sleep(2)
+            self.valve.close_valve_channel(calib_channels[i+1], 0.25)
+            print("Spanning %.3f CO2 in Cell B completed \n" % co2_span)
+
         print("Calibration complete!")
+

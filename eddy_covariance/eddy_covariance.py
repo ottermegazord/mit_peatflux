@@ -11,12 +11,12 @@ baudrate = 115200
 time = 1
 
 """Calibration Constants"""
-h2o_zero_interval = 1
-h2o_span_interval = 1
-co2_zero_interval = 1
-co2_span_interval = 1
-co2_ref = 1
-co2_span = [350, 390, 430]
+h2o_zero_interval = 7.5
+h2o_span_interval = 7.5
+co2_zero_interval = 7.5
+co2_span_interval = 7,5
+co2_ref = 0
+co2_span = [0, 0, 0]
 h2o_span = [0, 0, 0]
 
 """Log Files"""
@@ -43,7 +43,7 @@ while 1:
 
     dt = datetime.datetime.now()
     try:
-        if dt.minute == 0:
+        if dt.minute == 42:
             test.li7000_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval,
                                     h2o_span, co2_ref, co2_span)
         else:

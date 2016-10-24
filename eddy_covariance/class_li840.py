@@ -12,6 +12,7 @@ class li840:
     def li840_readline(self):
         self.ser.flushInput()
         self.ser.flushOutput()
+	self.ser.write(bytes("<LI840><DATA>?</DATA></LI840>\n".encode()))
         output = self.ser.readline()
         return output
 
@@ -26,6 +27,7 @@ class li840:
         f1 = open(li840_raw, 'w')
         serial_output = self.li840_readline()
         serial_output_eol = serial_output + '\n'
+	print(serial_output)
         f1.write(serial_output_eol)
         f1.close()
 

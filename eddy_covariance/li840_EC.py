@@ -21,6 +21,7 @@ h2o_span = [0, 0, 0]
 
 """Log Files"""
 files_timed = list()
+files_raw = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_raw.xml'
 nodes = 6  # Number of profile nodes
 for i in range(1, nodes + 1):
     f = open('/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_timed_%i.xml' % i, 'a')
@@ -46,6 +47,7 @@ while 1:
 
     try:
         for i in range(0, len(files_timed)):
+	    print(files_timed[i])
             test.li840_pullnow(files_raw, files_timed[i])
 
     except:

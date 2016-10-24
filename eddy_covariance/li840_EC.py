@@ -45,14 +45,23 @@ valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 """Routine"""
 while 1:
-
+    dt = datetime.datetime.now()
     try:
+<<<<<<< HEAD
         for i in range(0, len(files_timed)):
             valve.open_valve_channel(i, 0.15)
             print(files_timed[i])
             time.sleep(2)
             test.li840_pullnow(files_raw, files_timed[i])
             valve.close_valve_channel(i, 0.15)
+=======
+        if dt.minute == (0 or 10 or 20 or 30 or 40 or 50):
+            for i in range(0, len(files_timed)):
+                valve.open_valve_channel(i, 0.15)
+                print(files_timed[i])
+                test.li840_pullnow(files_raw, files_timed[i])
+                valve.close_valve_channel(i, 0.15)
+>>>>>>> b73e6f38974e60d0db1af97cfeb3558e72ec3200
 
     except:
         continue

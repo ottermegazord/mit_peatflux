@@ -41,14 +41,17 @@ EC_channels = [1, 2, 3, 4]  # First element is zeroing Channel
 
 """Initialization"""
 test = li840(port, baudrate, time)
+valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 """Routine"""
 while 1:
 
     try:
         for i in range(0, len(files_timed)):
-	    print(files_timed[i])
+            valve.open_valve_channel(i, 0.15)
+            print(files_timed[i])
             test.li840_pullnow(files_raw, files_timed[i])
+            valve.close_valve_channel(i, 0.15)
 
     except:
         continue

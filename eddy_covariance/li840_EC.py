@@ -1,14 +1,14 @@
 #!/usr/bin/python
 
+import time
 import datetime
 from class_li840 import li840
 from class_valve import Valve
-import time
 
 """Serial Configuration"""
 port = '/dev/ttyUSB1'
 baudrate = 9600
-time = 1
+timeout = 1
 
 """Calibration Constants"""
 h2o_zero_interval = 7.5
@@ -40,7 +40,7 @@ SWITCH_INTERVAL = 0.5
 EC_channels = [1, 2, 3, 4]  # First element is zeroing Channel
 
 """Initialization"""
-test = li840(port, baudrate, time)
+test = li840(port, baudrate, timeout)
 valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 """Routine"""
@@ -50,6 +50,7 @@ while 1:
         for i in range(0, len(files_timed)):
             valve.open_valve_channel(i, 0.15)
             print(files_timed[i])
+            time.sleep(2)
             test.li840_pullnow(files_raw, files_timed[i])
             valve.close_valve_channel(i, 0.15)
 

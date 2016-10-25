@@ -22,7 +22,7 @@ h2o_span = [0, 0, 0]
 """Log Files"""
 files_timed = list()
 files_raw = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_raw.xml'
-nodes = 6  # Number of profile nodes
+nodes = 8  # Number of profile nodes
 for i in range(1, nodes + 1):
     f = open('/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_timed_%i.xml' % i, 'a')
     files_timed.append("/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_timed_%i.xml" % i)
@@ -45,13 +45,16 @@ valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 """Routine"""
 while 1:
-    dt = datetime.datetime.now()
-    try:
-        if dt.minute == (0 or 10 or 20 or 30 or 40 or 50):
-            for i in range(0, len(files_timed)):
-                valve.open_valve_channel(i, 0.15)
-                print(files_timed[i])
-                test.li840_pullnow(files_raw, files_timed[i])
-                valve.close_valve_channel(i, 0.15)
-    except:
-        continue
+    	dt = datetime.datetime.now()
+    	try:
+		if dt.minute == 10 or dt.minute == 20 or dt.minute == 30 or dt.minute == 40 or dt.minute == 50 or dt.minute == 0:
+			print(dt.minute)
+			for i in range(0, len(files_timed)):
+				valve.open_valve_channel(i, 0.15)
+				time.sleep(20)
+				print(files_timed[i])
+				test.li840_pullnow(files_raw, files_timed[i])
+				valve.close_valve_channel(i, 0.15)
+
+    	except:
+		continue

@@ -31,7 +31,7 @@ Step 20) Change the usb port number according to whichever equipment is used for
 
 Testing
 Step 21) At the doc directory, type sungrow -vvv example_system_config_2.yml
-Step 22) There would be a file with the data stored in it.
+Step 22) sudo nano inverter_status.csv (to check for logging for allegro inverter)
 
 Known bugs (Solved)
 1) When setting up PyYaml, the python headers couldnt be detected.

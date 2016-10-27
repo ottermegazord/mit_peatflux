@@ -8,7 +8,7 @@ from class_li840 import li840
 from class_valve import Valve
 
 """Serial Configuration"""
-port = '/dev/ttyUSB1'
+port = '/dev/li840'
 baudrate = 9600
 timeout = 1
 
@@ -31,8 +31,8 @@ for i in range(1, nodes + 1):
     f.close()
 
 #  Calibration Log
-log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_log.txt'
-cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_cal.xml'
+log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_log.xml'
+cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_cal.txt'
 
 """Time/Intervals/Periods"""
 li840_read_period = 10  # in seconds

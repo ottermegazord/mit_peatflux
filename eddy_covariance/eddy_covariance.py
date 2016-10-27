@@ -6,7 +6,7 @@ from class_valve import Valve
 import time
 
 """Serial Configuration"""
-port = '/dev/ttyUSB0'
+port = '/dev/li7000'
 baudrate = 115200
 time = 1
 

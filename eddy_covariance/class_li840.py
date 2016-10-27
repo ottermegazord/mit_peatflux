@@ -94,7 +94,7 @@ class li840:
             self.li840_writelog(poll)
         dt = datetime.datetime.now()
         isodate = "%s-%s-%s" % (dt.year, dt.month, dt.day)
-        str = "<LI840><CAL><DATE>%s</DATE><CO2SPAN>%.3F</CO2SPAN></CAL></LI840>\n" % span
+        str = "<LI840><CAL><DATE>%s</DATE><CO2SPAN>%.3f</CO2SPAN></CAL></LI840>\n" % (isodate,span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -110,7 +110,7 @@ class li840:
             self.li840_writelog(poll)
         dt = datetime.datetime.now()
         isodate = "%s-%s-%s" % (dt.year, dt.month, dt.day)
-        str = "<LI840><CAL><DATE>%s</DATE><H2OSPAN>%.3F</H2OSPAN></CAL></LI840>\n" % span
+        str = "<LI840><CAL><DATE>%s</DATE><H2OSPAN>%.3f</H2OSPAN></CAL></LI840>\n" % (isodate,span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -146,8 +146,8 @@ class li840:
             print("Spanning %.3f H2O completed \n" % h2o_span[i])
 
             print("Spanning %.3f CO2 for %.3f minutes\n" % (co2_span[i], co2_span_interval))
-            time.sleep(3
-            self.li40_spanco2(co2_span[i], co2_span_interval)
+            time.sleep(3)
+            self.li840_spanco2(co2_span[i], co2_span_interval)
             time.sleep(2)
             self.valve.close_valve_channel(calib_channels[i + 1], 0.25)
             print("Spanning %.3f CO2 completed \n" % co2_span[i])

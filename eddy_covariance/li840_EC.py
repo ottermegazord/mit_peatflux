@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+"""Li840 for Eddy Covariance System"""
+
 import time
 import datetime
 from class_li840 import li840

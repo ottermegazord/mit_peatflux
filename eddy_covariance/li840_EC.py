@@ -28,6 +28,10 @@ for i in range(1, nodes + 1):
     files_timed.append("/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_timed_%i.xml" % i)
     f.close()
 
+#  Calibration Log
+log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_log.txt'
+cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_cal.xml'
+
 """Time/Intervals/Periods"""
 li7000_time_period = 0.1  # in seconds
 
@@ -40,21 +44,22 @@ SWITCH_INTERVAL = 0.5
 EC_channels = [1, 2, 3, 4]  # First element is zeroing Channel
 
 """Initialization"""
-test = li840(port, baudrate, timeout)
+test = li840(port, baudrate, time, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list, log_txt,
+                 cal_txt)
 valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 """Routine"""
 while 1:
-    	dt = datetime.datetime.now()
-    	try:
-		if dt.minute == 10 or dt.minute == 20 or dt.minute == 30 or dt.minute == 40 or dt.minute == 50 or dt.minute == 0:
-			print(dt.minute)
-			for i in range(0, len(files_timed)):
-				valve.open_valve_channel(i, 0.15)
-				time.sleep(20)
-				print(files_timed[i])
-				test.li840_pullnow(files_raw, files_timed[i])
-				valve.close_valve_channel(i, 0.15)
+    dt = datetime.datetime.now()
+    try:
+        if dt.minute == 10 or dt.minute == 20 or dt.minute == 30 or dt.minute == 40 or dt.minute == 50 or dt.minute == 0:
+            print(dt.minute)
+            for i in range(0, len(files_timed)):
+                valve.open_valve_channel(i, 0.15)
+                time.sleep(20)
+                print(files_timed[i])
+                test.li840_pullnow(files_raw, files_timed[i])
+                valve.close_valve_channel(i, 0.15)
 
-    	except:
-		continue
+    except:
+        continue

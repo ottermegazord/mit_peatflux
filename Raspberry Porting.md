@@ -17,9 +17,9 @@ Step 9) tar -xzf PyYAML-3.10.tar.gz
 Step 10) cd PyYAML-3.10
 Step 11) python setup.py build && sudo su -c 'python setup.py install'
 
-Step 12) wget http://pypi.python.org/package/source/p/pyserial/pyserial-2.6.tar.gz
+Step 12) wget http://pypi.python.org/packages/source/p/pyserial/pyserial-2.6.tar.gz
 Step 13) tar -xzf pyserial-2.6.tar.gz
-Step 14) cd serial-2.6
+Step 14) cd pyserial-2.6
 Step 15) python setup.py build && sudo su -c 'python setup.py install' 
 
 Checking for port number for RS-232

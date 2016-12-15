@@ -22,16 +22,19 @@ Step 13) tar -xzf pyserial-2.6.tar.gz
 Step 14) cd pyserial-2.6
 Step 15) python setup.py build && sudo su -c 'python setup.py install' 
 
+Setting up sungrow
+Step 16) python setup.py build && sudo su -c 'python setup.py install'
+
 Checking for port number for RS-232
-Step 16) dmesg | grep -i usb
-Step 17) cd sungrow-0.1b7_4
-Step 18) cd doc
-Step 19) sudo nano example_system_config_2.yml (for allegro and outback charge controller)
-Step 20) Change the usb port number according to whichever equipment is used for testing.
+Step 17) dmesg | grep -i usb
+Step 18) cd sungrow-0.1b7_4
+Step 19) cd doc
+Step 20) sudo nano example_system_config_2.yml (for allegro and outback charge controller)
+Step 21) Change the usb port number according to whichever equipment is used for testing.
 
 Testing
-Step 21) At the doc directory, type sungrow -vvv example_system_config_2.yml
-Step 22) sudo nano inverter_status.csv (to check for logging for allegro inverter)
+Step 22) At the doc directory, type sungrow -vvv example_system_config_2.yml
+Step 23) sudo nano inverter_status.csv (to check for logging for allegro inverter)
 
 Known bugs (Solved)
 1) When setting up PyYaml, the python headers couldnt be detected.

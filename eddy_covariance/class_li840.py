@@ -94,7 +94,7 @@ class li840:
             self.li840_writelog(poll)
         dt = datetime.datetime.now()
         isodate = "%s-%s-%s" % (dt.year, dt.month, dt.day)
-        str = "<LI840><CAL><DATE>%s</DATE><CO2SPAN>%.3F</CO2SPAN></CAL></LI840>\n" % span
+        str = "<LI840><CAL><DATE>%s</DATE><CO2SPAN>%.3f</CO2SPAN></CAL></LI840>\n" % (isodate,span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
         self.ser.flushInput()
@@ -110,48 +110,48 @@ class li840:
             self.li840_writelog(poll)
         dt = datetime.datetime.now()
         isodate = "%s-%s-%s" % (dt.year, dt.month, dt.day)
-        str = "<LI840><CAL><DATE>%s</DATE><H2OSPAN>%.3F</H2OSPAN></CAL></LI840>\n" % span
+        str = "<LI840><CAL><DATE>%s</DATE><H2OSPAN>%.3f</H2OSPAN></CAL></LI840>\n" % (isodate,span)
         self.ser.write(bytes(str.encode()))
         time.sleep(0.1)
         self.ser.flushInput()
         self.ser.flushOutput()
 
 
-def li840_calibration(self, calib_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval,
-                      co2_span_interval, h2o_span, co2_span):
-    self.li840_writecal(datetime.datetime.now().isoformat() + '\n')
-    print("Initiate Calibration\n")
-    """Zeroing Cell A"""
+    def li840_calibration(self, calib_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval,
+                          co2_span_interval, h2o_span, co2_span):
+        self.li840_writecal(datetime.datetime.now().isoformat() + '\n')
+        print("Initiate Calibration\n")
+        """Zeroing Cell A"""
 
-    print("Zeroing H2O for %.3f minutes\n" % h2o_zero_interval)
-    self.valve.open_valve_channel(calib_channels[0], 0.25)
-    self.li840_zeroh2o(h2o_zero_interval)
-    time.sleep(2)
-    print("Zero H2O completed \n")
-
-    print("Zeroing CO2 for %.3f minutes\n" % co2_zero_interval)
-    self.li840_zeroco2(co2_zero_interval)
-    time.sleep(2)
-    print("Zero CO2 in Cell A completed \n")
-    self.valve.close_valve_channel(calib_channels[0], 0.25)
-    print("Matching CO2 in Cell A and B completed \n")
-
-    """Spanning"""
-
-    for i in range(0, len(co2_span)):
-        print("Spanning %.3f H2O for %.3f minutes\n" % (h2o_span[i], h2o_span_interval))
-        self.valve.open_valve_channel(calib_channels[i + 1], 0.25)
-        self.li840_spanh2o(h2o_span[i], h2o_span_interval)
-        time.sleep(3)
-        print("Spanning %.3f H2O completed \n" % h2o_span[i])
-
-        print("Spanning %.3f CO2 for %.3f minutes\n" % (co2_span[i], co2_span_interval))
-        time.sleep(3)
-        self.li840_spanco2(co2_span[i], co2_span_interval)
+        print("Zeroing H2O for %.3f minutes\n" % h2o_zero_interval)
+        self.valve.open_valve_channel(calib_channels[0], 0.25)
+        self.li840_zeroh2o(h2o_zero_interval)
         time.sleep(2)
-        self.valve.close_valve_channel(calib_channels[i + 1], 0.25)
-        print("Spanning %.3f CO2 completed \n" % co2_span[i])
-        time.sleep(2)
+        print("Zero H2O completed \n")
 
-    time.sleep(3)
-    print("Calibration complete!")
+        print("Zeroing CO2 for %.3f minutes\n" % co2_zero_interval)
+        self.li840_zeroco2(co2_zero_interval)
+        time.sleep(2)
+        print("Zero CO2 in Cell A completed \n")
+        self.valve.close_valve_channel(calib_channels[0], 0.25)
+        print("Matching CO2 in Cell A and B completed \n")
+
+        """Spanning"""
+
+        for i in range(0, len(co2_span)):
+            print("Spanning %.3f H2O for %.3f minutes\n" % (h2o_span[i], h2o_span_interval))
+            self.valve.open_valve_channel(calib_channels[i + 1], 0.25)
+            self.li840_spanh2o(h2o_span[i], h2o_span_interval)
+            time.sleep(3)
+            print("Spanning %.3f H2O completed \n" % h2o_span[i])
+
+            print("Spanning %.3f CO2 for %.3f minutes\n" % (co2_span[i], co2_span_interval))
+            time.sleep(3)
+            self.li840_spanco2(co2_span[i], co2_span_interval)
+            time.sleep(2)
+            self.valve.close_valve_channel(calib_channels[i + 1], 0.25)
+            print("Spanning %.3f CO2 completed \n" % co2_span[i])
+            time.sleep(2)
+
+        time.sleep(3)
+        print("Calibration complete!")

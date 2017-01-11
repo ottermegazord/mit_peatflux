@@ -1,12 +1,14 @@
 #!/usr/bin/python
 
+"""Li840 for Eddy Covariance System"""
+
 import time
 import datetime
 from class_li840 import li840
 from class_valve import Valve
 
 """Serial Configuration"""
-port = '/dev/ttyUSB1'
+port = '/dev/li840'
 baudrate = 9600
 timeout = 1
 
@@ -14,7 +16,7 @@ timeout = 1
 h2o_zero_interval = 7.5
 h2o_span_interval = 7.5
 co2_zero_interval = 7.5
-co2_span_interval = 7, 5
+co2_span_interval = 7.5
 co2_ref = 0
 co2_span = [0, 0, 0]
 h2o_span = [0, 0, 0]
@@ -28,8 +30,12 @@ for i in range(1, nodes + 1):
     files_timed.append("/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_timed_%i.xml" % i)
     f.close()
 
+#  Calibration Log
+log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_log.xml'
+cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_cal.txt'
+
 """Time/Intervals/Periods"""
-li7000_time_period = 0.1  # in seconds
+li840_read_period = 10  # in seconds
 
 """Valve Pin Assignments"""
 open_chan_list = [31, 33, 35, 37]
@@ -40,21 +46,26 @@ SWITCH_INTERVAL = 0.5
 EC_channels = [1, 2, 3, 4]  # First element is zeroing Channel
 
 """Initialization"""
-test = li840(port, baudrate, timeout)
+test = li840(port, baudrate, timeout, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list, log_txt,
+                 cal_txt)
 valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 """Routine"""
 while 1:
-    	dt = datetime.datetime.now()
-    	try:
-		if dt.minute == 10 or dt.minute == 20 or dt.minute == 30 or dt.minute == 40 or dt.minute == 50 or dt.minute == 0:
-			print(dt.minute)
-			for i in range(0, len(files_timed)):
-				valve.open_valve_channel(i, 0.15)
-				time.sleep(20)
-				print(files_timed[i])
-				test.li840_pullnow(files_raw, files_timed[i])
-				valve.close_valve_channel(i, 0.15)
+    dt = datetime.datetime.now()
+    try:
+	
+	if (dt.hour == 23 and dt.minute == 30):
+	   test.li840_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_span)
 
-    	except:
-		continue
+        elif dt.minute == 0 or dt.minute == 10 or dt.minute == 20 or dt.minute == 30 or dt.minute == 40 or dt.minute == 50 :
+            print(dt.minute)
+            for i in range(0, len(files_timed)):
+                valve.open_valve_channel(i, 0.15)
+                time.sleep(li840_read_period)
+                print(files_timed[i])
+                test.li840_pullnow(files_raw, files_timed[i])
+                valve.close_valve_channel(i, 0.15)
+
+    except:
+        continue

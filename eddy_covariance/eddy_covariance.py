@@ -6,15 +6,15 @@ from class_valve import Valve
 import time
 
 """Serial Configuration"""
-port = '/dev/ttyUSB0'
+port = '/dev/li7000'
 baudrate = 115200
 time = 1
 
 """Calibration Constants"""
-h2o_zero_interval = 0.01
-h2o_span_interval = 0.01
-co2_zero_interval = 0.01
-co2_span_interval = 0.01
+h2o_zero_interval = 7.5
+h2o_span_interval = 7.5
+co2_zero_interval = 7.5
+co2_span_interval = 7.5
 co2_ref = 0
 co2_span = [0, 1, 1]
 h2o_span = [0, 1, 1]
@@ -43,7 +43,7 @@ while 1:
 
     dt = datetime.datetime.now()
     try:
-        if dt.minute == 27:
+        if (dt.hour == 22 and dt.minute) == 0:
             test.li7000_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval,
                                     h2o_span, co2_ref, co2_span)
         else:

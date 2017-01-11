@@ -1,0 +1,45 @@
+## Example system configuration file
+period: 0.25 s
+devices:
+  charge_controller:
+    device_type: sungrow_charge_controller
+    port: /dev/ttyUSB1
+    data_streams:
+      status_page: status.csv
+      history_page: history.csv
+  inverter:
+    device_type: sungrow_inverter
+    port: /dev/ttyUSB1
+    data_streams:
+      status_page: inverter_status.csv
+actions:
+  - 
+    action: send
+    device: charge_controller
+    message_type: status_query
+  -
+    action: sleep
+    seconds: 0.5
+  -
+    action: handle_incoming_messages
+  -
+    action: send
+    condition: system_back_online
+    device: charge_controller
+    message_type: history_query
+  -
+    action: sleep
+    condition: system_back_online
+    seconds: 0.5
+  -
+    action: handle_incoming_messages
+    condition: system_back_online
+  -
+    action: send
+    device: inverter
+    message_type: status_query
+  -
+    action: sleep
+    seconds: 0.5
+  -
+    action: handle_incoming_messages

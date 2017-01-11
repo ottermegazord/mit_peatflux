@@ -1,0 +1,29 @@
+## System configuration file for Outback and Allegro
+period: 1 s
+devices:
+  charge_controller:
+    device_type: outback_charge_controller
+    port: /dev/ttyUSB0
+    port_settings:
+      baudrate: 19200
+      dsrdtr: True
+    data_streams:
+      status_page: status.csv
+  inverter:
+    device_type: allegro_inverter
+    port: /dev/ttyUSB1
+    port_settings:
+      baudrate: 4800
+    data_streams:
+      status_page: inverter_status.csv
+actions:
+  -
+    action: set_port_flag
+    device: charge_controller
+    flag: RTS
+    level: False
+  -
+    action: sleep
+    seconds: 2
+  -
+    action: handle_incoming_messages

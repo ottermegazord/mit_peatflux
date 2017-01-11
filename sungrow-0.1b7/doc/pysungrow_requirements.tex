@@ -1,0 +1,636 @@
+%\documentclass[pdftex,openright,12pt,a4paper]{book}
+\documentclass[pdftex,oneside,12pt,a4paper]{book}
+\newcommand\linesep{1.68}
+
+\usepackage[includehead,margin=2.5cm]{geometry}
+\raggedbottom
+
+\usepackage{pysungrow}
+
+\begin{document}
+\title{pysungrow Requirements}
+\author{Alex Cobb}
+
+\frontmatter
+
+
+%========================== Title page ================================
+\thispagestyle{empty}
+
+\vspace*{\stretch{1.68}}
+
+\noindent
+{\center\Huge\bfseries
+  \texttt{pysungrow} Requirements \\
+}
+
+\vspace*{\stretch{1}}
+
+{\center\large
+  \noindent
+  {\Large
+  Alex Cobb \\
+  }
+
+  \vspace{4ex}
+
+  \noindent
+  {\normalsize
+  Version 1, draft 2 \\
+  \today \\ }
+}
+
+%======================== Copyright page ==============================
+\pagebreak
+
+\thispagestyle{empty}
+
+\vspace*{0.33\textheight}
+\hspace{3em}
+\parbox{30em}{%
+\begin{small}
+  \noindent
+  \copyright 2012 Alexander Ruggles Cobb \\
+  All rights reserved.
+\end{small}
+}
+\vspace{\stretch{1}}
+
+\tableofcontents
+
+\mainmatter
+
+\chapter{Problem description}
+All peatflux field measurements depend on a reliable supply of power.  Currently we have no information about the performance of our power supply system, beyond the battery voltage logged by the CR1000, which is very indirect.  This means that we have to rely on guesswork for troubleshooting power outages. In addition, our sense of power availability is approximate, based on conservative design calculations using average weather, nominal efficiency of power system components, and nominal load from instruments. Buying sensors to monitor the power supply would be expensive and design-intensive, because we need high-side measurements of small currents at high voltages relative to normal integrated circuit limits.  Recording outputs of power supply components will be a more time- and cost-effective option, but requires reading and logging of these outputs.
+
+\section{Objectives and success criteria}
+We have multiple power supply devices at each site, each of which can send status pages either periodically or in response to a command.  We want a device to log these pages and record errors at a user-specified interval.
+
+\subsection{O-1 Obtain power system efficiency and troubleshooting information}
+We will use these data to determine accurately the power that is available for additional needs and troubleshoot power outages. Troubleshooting will include identifying battery fatigue, reduced solar output from dust or shading, load short, load disconnect, and inverter or charge controller malfunction. As a log history is accumulated, we will be able to predict problems based on weather patterns by correlating power input with micrometeorological variables.  We will be able to evaluate in advance, or from afar, if there is risk of a power outtage, and evaluate gains from system improvements, such as addition of a battery temperature sensor.
+
+\subsection{SC-1 Plot power supply variables}
+Have the data to plot variables including solar charge current, battery voltage, and load power against time.  Also have the data to plot inverter efficiency vs.\ load and evaluate battery energy storage efficiency.
+
+\subsection{SC-2 Determine true power availability}
+Have the data to evaluate how much power we can use continuously, or at what risk of failure, based on measured efficiencies of components and loads from system.
+
+\subsection{SC-3 System reliability}
+Power monitoring system is up 95\% or more of power system uptime and at least 2 hours into power system downtime, if any.
+
+\section{Risks}
+\subsection{RI-1 Benefit not worth effort and money}
+We might learn little that we did not already know by logging power supply information.  True efficiencies and loads might be very close to nominal loads.  This would mean that time spent on developing this system could have been better spent on something else.
+
+\chapter{Project vision and scope}
+The power monitoring system can read status pages from multiple devices through their serial interfaces. For our immediate needs, the system reads Sungrow charge controllers, Sungrow inverters, Outback charge controllers, and Allegro inverters in any combination of charge controller and inverter type.  The system is extensible in the sense that support for a new type of power monitoring device can be added without any change in architecture or user interface provided that the new device communictates through a serial interface.  The system runs on a computer-on-module (COM) or microcontroller platform, such as Arduino, resulting in a device that is low cost, low power, and physically fits in the Sungrow charge controller enclosure.  The output of the device is self-describing, including metadata describing the context of measurements and facilitating data interpretation.
+
+\section{Major features}
+\subsection{FE-1: Command-line interaction with power management devices}
+Users can interact with power management devices on a command line.  To the extent supported by the device, the user can read device status, device history, and device configuration, and make changes to device configuration.  Interaction is possible at two levels:  using the native protocol and commands of that device, or using a generic interface general to all supported devices.  The power monitoring system imposes no limitation on the number of ports used for communication with devices, or on the number of devices on each port.
+
+\subsection{FE-2: Logging of power management devices}
+Users can configure the power management system to periodically record the status of attached devices.  Errors, information, and warning can be logged to a separate stream or file from data.
+
+\subsection{FE-3: Log-on-startup of power management devices}
+When so configured, the power monitoring system begins logging (FE-2) as soon as it has started up.  The user may configure the system to log device history and configuration when it detects that it has restarted or if it detects that a device has restarted.
+
+\subsection{FE-4: Emulation of power management devices}
+For troubleshooting purposes, the power monitoring system can emulate any supported power management device.  The emulation may not be realistic in terms of reported values, but imitates the protocol used by the device.
+
+
+\section{Scope, limitations and exclusions}
+Support for Sungrow charge controller and inverter shall be provided in release 0.9.  Support for Outback charge controller shall be provided in release 1.0.
+
+\begin{itemize}
+\item LI-1:  There are no plans for a graphical user interface.
+\end{itemize}
+
+\section{Priorities}
+\subsection{Schedule}
+Schedule pressure is driven by the diminishing value of the data provided by the system as time goes on.  Time to completion is constrained by availability of people to work on the system.
+
+\subsection{Features}
+Reliable behaviour is more important than feature set;  it is better to deploy a restricted, reliable version than a more feature-rich but less reliable one.
+
+\subsection{Quality goals}
+The remoteness of deployment puts a focus on \emph{reliability} and \emph{fault tolerance} for the power monitoring system.  This drives an internal goal of testability of the system, and focus on error branches in test code. 
+
+Other quality goals are motivated by the long anticipated lifetime of the system.  The need for the power monitoring system will persist as long as field measurements continue, so a system will be needed for 10 years or longer.  During this time, we can anticipate several changes in the operating environment of the system:
+\begin{itemize}
+\item Change of personnel
+\item Replacement of Overo COM with a different host device
+\item New power management devices added to system
+\item Change in device interface, e.g., ethernet or Modbus instead of RS-232 or RS-485
+\item Transition to Python 3
+\end{itemize}
+The system will function better under these changes of environment if these quality goals are emphasized:
+\begin{itemize}
+\item User and developer documentation
+\item Generality of output format (uniformity across devices)
+\item Modularity and understandability of code
+\end{itemize}
+
+\chapter{User requirements and use cases}
+\section{User classes}
+\subsection{Deployer}
+User who connects the power monitoring device for log-on-startup.
+
+\subsection{Configurer}
+User who configures power monitoring system for logging.
+
+\subsection{Troubleshooter}
+User who interacts with power monitoring devices on the command line to verify behaviour.  User may also use the system's emulation capabilities to test communication links.
+
+\section{Use cases}
+\subsection{UC-1: List configured devices}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User requests device list \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 1.0 List configured devices\\
+ & 1.\ User requests list of configured devices \\
+ & 2.\ System provides list of devices and their ports\\\hline
+Alternate courses: & None \\\hline
+Exceptions: & 1.0.E.1 Bad configuration (at step 1) \\
+ & 1.\  System informs user and returns to interactive mode\\\hline
+Priority: & Low \\\hline
+Frequency of use: & Once per interactive session \\\hline
+Rules: & R-2 \\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & None\\\hline
+\end{tabular}
+
+\subsection{UC-2: Submit low-level command to port}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User submits a command to a device in the device's native format \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 2.0 Submit command string to port\\
+ & 1.\ User enters low-level command as bytes (could be ASCII or binary) \\
+ & 2.\ System sends command to device\\\hline
+Alternate courses: & 2.1 Submit hex command to port\\
+ & 1.\ User enters hex command \\
+ & 2.\ System converts command to binary and sends to device \\\hline
+Exceptions: & 2.0.E.2 Communication failure (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\hline
+Priority: & Medium \\\hline
+Frequency of use: & Troubleshooting, adding new device type\\\hline
+Rules: & None\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & No protection against bad commands.\\\hline
+\end{tabular}
+
+\subsection{UC-3: Read low-level response from port}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & Read a message from device in its native format \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 3.0 Read string response from port\\
+ & 1.\ User requests to read a message from the device \\
+ & 2.\ System reads and returns any response from device\\\hline
+Alternate courses: & 3.1 Read hex response from port\\
+ & 1.\ User requests hex message from device \\
+ & 2.\ System reads message from device and converts to hex\\\hline
+Exceptions: & 3.0.E.1 Communication failure (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\cline{2-2}
+ & 3.0.E.2 No response from device (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\hline
+Priority: & Medium \\\hline
+Frequency of use: & Troubleshooting, adding new device type\\\hline
+Rules: & None\\\hline
+Special requirements: & None\\\hline
+Assumptions: & Device need not be configured\\\hline
+Notes and issues: & Requires a timeout\\\hline
+\end{tabular}
+
+\subsection{UC-4: Unpack message}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & Convert a message from native to generic format \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 4.0 Unpack message\\
+ & 1.\ User provides message in device type's native format \\
+ & 2.\ System converts message to generic format\\\hline
+Alternate courses: & None\\\hline
+Exceptions: & 4.0.E.1 Bad binary message (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\hline
+Priority: & Medium \\\hline
+Frequency of use: & Troubleshooting, adding new device type\\\hline
+Rules: & RC-3, RC-4, RC-5\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & Main task for new device type\\\hline
+\end{tabular}
+
+\subsection{UC-5: Get device configuration}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User requests device configuration, system provides it \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 5.0 Get device configuration\\
+ & 1.\ User requests configuration of an attached device \\
+ & 2.\ System provides device configuration\\\hline
+Alternate courses: & None \\\hline
+Exceptions: & 5.0.E.1 Device doesn't support functionality (at step 1)\\
+ & 1.\ System informs user and returns to interactive mode\\\cline{2-2}
+ & 5.0.E.2 No response from device (at step 2) \\
+ & 1.\ System informs user and returns to interactive mode\\\cline{2-2}
+ & 5.0.E.2 Malformed response (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\hline
+Priority: & Low \\\hline
+Frequency of use: & Troubleshooting or device restart\\\hline
+Rules: & RC-4\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & None\\\hline
+\end{tabular}
+
+\subsection{UC-6: Get device history}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User requests device history, system provides it \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 6.0 Get device history\\
+ & 1.\ User requests history of an attached device \\
+ & 2.\ System provides device history\\\hline
+Alternate courses: & None \\\hline
+Exceptions: & 6.0.E.1 Device doesn't support functionality (at step 1)\\
+ & 1.\ System informs user and returns to interactive mode \\\cline{2-2}
+ & 6.0.E.2 No response from device (at step 2) \\
+ & 1.\ System informs user and returns to interactive mode \\\cline{2-2}
+ & 6.0.E.2 Malformed response (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\hline
+Priority: & Low \\\hline
+Frequency of use: & Device restart\\\hline
+Rules: & RC-5\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & None\\\hline
+\end{tabular}
+
+\subsection{UC-7: Get device status}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User requests device status, system provides it \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 7.0 Get device status\\
+ & 1.\ User requests status of an attached device \\
+ & 2.\ System provides device status\\\hline
+Alternate courses: & None\\\hline
+Exceptions: & 7.0.E.2 No response from device (at step 2) \\
+ & 1.\ System informs user and returns to interactive mode\\\cline{2-2}
+ & 7.0.E.2 Malformed response (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\hline
+Priority: & High \\\hline
+Frequency of use: & 24 or more times per day for logging \\\hline
+Rules: & RC-3\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & None\\\hline
+\end{tabular}
+
+\subsection{UC-8: Change device configuration}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User submits configuration change, system conveys to device \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 8.0 Change device configuration \\
+ & 1.\ User requests configuration change for an attached device \\
+ & 2.\ System sends configuration change command to device\\\hline
+Alternate courses: & 8.1 Query device configuration options \\
+ & 1.\ User asks what configuration options may be changed\\
+ & 2.\ System provides list of configurable options\\\hline
+Exceptions: & 8.0.E.1 Bad request (at step 1) \\
+ & 1.\ System informs user and returns to interactive mode\\\cline{2-2}
+ & 8.0.E.2 Communication error (at step 2)\\
+ & 1.\ System reports raw response and error, returns to interactive mode\\\hline
+Priority: & Low \\\hline
+Frequency of use: & Device deployment, device restart\\\hline
+Rules: & RC-4\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & None\\\hline
+\end{tabular}
+
+\subsection{UC-9: Run device emulator on port}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User requests emulation of a device type on a port; emulator launches in an event loop and writes and responds to messages on the port according to device behaviour until interrupted \\\hline
+Preconditions: & 1.\ User has a terminal or console \\\hline
+Postconditions: & None \\\hline
+Normal course: & 9.0 Run device emulator on port\\
+ & 1.\ User requests that an emulator be started on a port \\
+ & 2.\ System starts emulator of desired type on port; emulator runs until interrupted\\\hline
+Alternate courses: & None\\\hline
+Exceptions: & 1.0.E.1 Unrecognized device type (at step 1) \\
+ & 1.\ System informs user and returns to interactive mode\\\cline{2-2}
+ & 1.0.E.2 Port unusable (at step 2)\\
+ & 1.\ System informs user and returns to interactive mode\\\hline
+Priority: & Medium \\\hline
+Frequency of use: & Troubleshooting and debugging\\\hline
+Rules: & None\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & None\\\hline
+\end{tabular}
+
+\subsection{UC-10: Log devices}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User configures system to log devices; system logs until interrupted \\\hline
+Preconditions: & 1.\ Devices are attached \\\hline
+Postconditions: & 1.\ System is logging data from devices \\\hline
+Normal course: & 10.0 Log devices\\
+ & 1.\ User configures system to log devices\\
+ & 2.\ System tests configuration\\
+ & 3.\ At each user-specified time, system performs a log cycle\\\hline
+Alternate courses: & None\\
+Exceptions: & 10.0.E.1 Bad configuration (at step 2)\\
+ & 1.\ System reports error and exits\\\cline{2-2}
+ & 10.0.E.2 No response from device (at step 3) \\
+ & 1.\ System reports error and exits\\\cline{2-2}
+ & 10.0.E.2 Malformed response (at step 3)\\
+ & 1.\ System reports error and exits\\\cline{2-2}
+ & 10.0.E.3 System cannot write to output stream (at step 3) \\
+ & 1.\ System reports error and exits\\\hline
+Priority: & High \\\hline
+Frequency of use: & Troubleshooting and trial runs\\\hline
+Rules: & RC-2\\\hline
+Special requirements: & None\\\hline
+Assumptions: & None\\\hline
+Notes and issues: & Choice to exit is motivated by distinction from UC-11; this use case is for making sure everything is working right, and should make it clear when there is something wrong.  UC-11, in contrast, is expected to run unattended and should keep going if it encounters a non-fatal error.\\\hline
+\end{tabular}
+
+\subsection{UC-11: Log-on-startup of devices}
+\begin{tabular}{|l|p{10cm}|}\hline
+Created by: & Alex Cobb, 2012-07-04 \\
+Modified by: & Alex Cobb, 2012-07-04 \\\hline
+Description: & User configures system to begin logging whenever monitoring device is on. Logging proceeds according to UC-10, but non-fatal errors are logged instead of stopping execution.\\\hline
+Preconditions: & 1.\ Device interfaces are configured \\
+ & 2.\ Devices are connected \\\hline
+Postconditions: & 1.\ System is logging data from devices \\\hline
+Normal course: & 11.0 Log-on-startup of devices\\
+ & 1.\ User provides power to system \\
+ & 2.\ System tests configuration\\
+ & 3.\ At each user-specified time, system performs a log cycle\\\hline
+Exceptions: & 11.0.E.1 Bad configuration (at step 2)\\
+ & 1.\ System logs error to error stream \\\cline{2-2}
+ & 11.0.E.2 No response from device (at step 3) \\
+ & 1.\ System logs error to error stream\\\cline{2-2}
+ & 11.0.E.2 Malformed response (at step 3)\\
+ & 1.\ System logs error to error stream\\\cline{2-2}
+ & 11.0.E.3 System cannot write to output stream (at step 3) \\
+ & 1.\ System logs error to error stream\\\cline{2-2}
+ & 11.0.E.4 System cannot write to error stream (at step 3)\\
+ & 1.\ System tries a series of fallback error streams\\\hline
+Priority: & High \\\hline
+Frequency of use: & Continuous during deployment\\\hline
+Rules: & RC-2, RC-3, RC-4, RC-5\\\hline
+Special requirements: & Non-fatal exceptions shall be reported on error streams, and shall not stop execution.\\\hline
+Assumptions: & Feasibility on monitoring device platform\\\hline
+Notes and issues: & 1.\ Device needs to start when power is restored.\\
+ & 2.\ What if status or configuration reports an error condition? Might want to make some device configuration change.\\\hline
+\end{tabular}
+
+\chapter{Functional requirements (SRS)}
+\section{Operating environment}
+\begin{itemize}
+\item OE-1: Logging shall work on Overo COM and desktop Linux.
+\item OE-2: Interactive mode shall work on Overo COM, desktop Linux, and Windows.
+\item OE-3: Log-on-startup shall work on Overo COM.
+\end{itemize}
+
+\section{Design and implementation constraints}
+\begin{itemize}
+\item CO-1: Python code shall pass pep8 without complaints.
+\item CO-2: Test coverage shall be greater than 90\%.
+\item CO-3: Metadata shall be in YAML.
+\item CO-4: Logged data shall be in comma-separated-value format.
+\item CO-5: Logged data and metadata shall use UTF-8 encoding.
+\item CO-6: Error log shall be browsable / parseable by standard UNIX log tools.
+\end{itemize}
+
+\section{User documentation}
+\begin{itemize}
+\item UD-1: Comprehensive docstrings shall provide online help for the Python interface.
+\item UD-2: A texinfo user's manual shall guide users through all major use cases and shall be available in html, info, and pdf formats.  The user's guide shall not assume familiarity with command-line utilities, Python or serial devices and protocols.
+\end{itemize}
+
+\section{Assumptions, non-assumptions and dependencies}
+\begin{itemize}
+\item AS-1: Power is provided to the device.
+\item NA-1: System may be down while a device is up.
+\item NA-2: System may be up while a device is down.
+\item NA-3: An arbitrary number of devices may be attached to each of an arbitrary number of ports.
+\item DE-1: Users must have a way to download data from the power monitoring device.
+\end{itemize}
+
+\section{System features}
+\subsection{FE-1 Command-line interaction with power management devices}
+\subsubsection{Description and priority}
+Devices typically have their own particular way of outputting status pages.  The command-line interface shall allow interaction with devices at two levels:  a low-level, device-type specific interface using the device's native communication format; and a generic interface that uses a format common to all devices.
+
+\subsubsection{Stimulus / response sequences}
+\begin{tabular}{lp{0.4\linewidth}}
+\emph{Stimulus} & \emph{Response}\\
+User requests device list & System provides list of devices and their ports \\
+User submits low-level command & System sends command to device \\
+User requests a low-level read & System reads and returns raw response from device \\
+User requests device configuration & System provides device configuration \\
+User requests device history & System provides device log history \\
+User requests device status & System provides device status \\
+User submits device configuration change & System attempts to change configuration of device \\
+User requests emulator launch & Emulator is launched on port \\
+\end{tabular}
+
+\subsubsection{Functional requirements}
+\begin{supertabular}{lp{0.5\linewidth}}
+Interactive.Configuration & The system shall provide a means to specify the device type, port (read from device, write to device), log stream and error stream for a device. Format shall follow RC-2. \\
+Interactive.Configuration.Bad & The system shall raise an exception if configuration is incomplete or inconsistent.\\
+Interactive.Configuration.Types & The system shall allow configuration of at least the following device types: Sungrow SD4860 charge controller, Sungrow SN481KS inverter, Outback FlexMax 60/80 charge controller, Allegro TC10/48 inverter. \\
+Interactive.DeviceList & The system shall allow a user to request a list of configured devices. \\
+Interactive.LowLevel.Write & The system shall allow a user to write a binary (string) or hex message to a port.\\
+Interactive.LowLevel.Read & The system shall allow a user to read raw data from a port.\\
+Interactive.UnpackMessage & The system shall provide a means to unpack a raw message from a device into a message format conforming to RC-3, RC-4, or RC-5 depending on the message type.\\
+Interactive.DeviceConfiguration.Query & For devices that support it, the system shall allow a user to retrieve device configuration information in a format conforming to RC-4.\\
+Interactive.DeviceConfiguration.Options & The system shall allow the user to query the configuration options that may be modified by a configuration change request.\\
+Interactive.DeviceConfiguration.Change & For devices that support it, the system shall allow a user to modify device configuration by submitting a message conforming to RC-4.\\
+Interactive.History & For devices that support it, the system shall allow a user to retrieve device history in a format conforming to RC-5.\\
+Interactive.Status & The system shall allow a user to obtain device status in a generic format conforming to RC-3.\\
+Interactive.Timeout & If a device is non-responsive within a user-specified time interval, system shall raise an exception.\\
+Interactive.Emulator & The system shall allow a user to launch an emulator of any supported device type on a user-specified port. The emulator shall run in an event loop, sending and receiving messages in imitation of the device, until interrupted.\\
+\end{supertabular}
+
+\subsection{FE-2 Logging of power management devices}
+\subsubsection{Description and priority}
+System shall log all correctly configured devices and emit a warning for incorrectly configured or missing devices.
+
+\subsubsection{Stimulus / response sequences}
+\begin{tabular}{lp{0.4\linewidth}}
+\emph{Stimulus} & \emph{Response}\\
+Device restart detected & Check device status and history, start new data log file \\
+\end{tabular}
+
+\subsubsection{Functional requirements}
+\begin{supertabular}{lp{0.6\linewidth}}
+Logging.Configuration & System shall read a logging configuration according to RC-2.\\
+Logging.Configuration.Test & System shall allow user to test configuration without actually logging.\\
+Logging.Configuration.Bad & System shall raise an exception if configuration is incomplete or inconsistent.\\
+Logging.Scheduling & System shall allow user to specify a schedule in clock times of when to execute log cycles.\\
+Logging.Log & System shall execute log cycles on a user-specified schedule.\\
+Logging.Log.NoResponse & If no response is received from the device before timeout, the system shall raise an exception. \\
+Logging.Log.BadResponse & If the device response is bad (fails checksum, otherwise malformed), the system shall raise an exception. \\
+Logging.Log.Data.NoWrite & If the system cannot write to the data stream (out of disk space, bad permissions, target directory doesn't exist), the system shall raise an exception.\\
+Logging.Log.Error.NoWrite & If the system cannot write to the error stream (out of disk space, bad permissions, target directory doesn't exist), the system shall raise an exception.\\
+Logging.ConfigureDevice & The system shall allow the user to configure the logging system to perform device configuration when device restart is detected. \\
+Logging.History & The system shall allow the user to configure the logging system to perform a history query when device restart is detected. \\
+Logging.SystemRestart & The system shall be configurable to do something different if it detects that it has restarted. \\
+Logging.DeviceRestart & The system shall be configurable to do something different if it detects that a device has restarted. \\
+\end{supertabular}
+
+\subsection{FE-3 Log-on-startup of power management devices}
+\subsubsection{Description and priority}
+When configured, the monitoring device shall, on startup, perform any device configuration interactions and then begin logging configured devices as described in section FE-2, except that exceptions shall be logged to the error stream instead of appearing on the console.
+
+\subsubsection{Stimulus / response sequences}
+\begin{tabular}{ll}
+Power is restored & System starts logging \\
+Device restart detected & Check status and history, start new data log file. \\
+\end{tabular}
+
+\subsubsection{Functional requirements}
+\begin{supertabular}{lp{0.6\linewidth}}
+LogOnStartup.Configuration & System shall read a logging configuration according to RC-2.\\
+LogOnStartup.PowerOn & Monitoring device shall start up when power is restored.\\
+LogOnStartup.Startup & System shall begin logging when monitoring device starts.\\
+LogOnStartup.Errors & All non-fatal exceptions raised during logging under FE-2 shall be converted to messages directed to error stream when in non-interactive logging mode.\\
+LogOnStartup.NoConfiguration & If configuration files are missing, system shall continue with previous configuration [TBD: feasibility?] \\
+LogOnStartup.NoErrorStream & If the error stream cannot be written to, the system shall try a sequence of fallback error streams before giving up.\\
+\end{supertabular}
+
+\subsection{FE-4 Emulation of power management devices}
+\subsubsection{Description and priority}
+The system shall allow the user to start an emulator on a user-specified port that imitates the behaviour of any supported power management device.  This is a valuable tool for self tests during troubleshooting. The following self-tests shall be made possible by the emulation feature:
+\begin{enumerate}
+\item Software loop: system interacts with the emulator via stream, either in interactive or logging mode.
+\item Hardware loop: system interacts with the emulator via hardware port, either in interactive or logging mode.
+\item Vendor software interaction: vendor software interacts with emulator via hardware port.
+\end{enumerate}
+
+\subsubsection{Stimulus / response sequences}
+Emulator shall behave according to vendor documentation for the emulated device in response to all user interactions specified in FE-1 and FE-2.
+
+\subsubsection{Functional requirements}
+\begin{tabular}{lp{0.6\linewidth}}
+Emulator.Configuration & System shall allow the user to specify a port and device type to emulate on that port.\\
+Emulator.Loop & The emulator sahll run in a loop until terminated.\\
+\end{tabular}
+
+\section{External interface requirements}
+\subsection{User interfaces}
+\begin{itemize}
+\item UI-1: A Python API shall be provided for interaction via a Python shell.
+\end{itemize}
+
+\subsection{Hardware interfaces}
+\begin{itemize}
+\item HI-1: User must be able to download data from power monitoring device.
+\end{itemize}
+
+\subsection{Software interfaces}
+\begin{itemize}
+\item SI-1: The Python API available for interactive use (UI-1) shall also function as a software interface for programmatic use.
+\end{itemize}
+
+\section{Nonfunctional requirements}
+\subsection{Performance requirements}
+\begin{itemize}
+\item PE-1: The system shall be capable of logging two devices at 5-minute intervals.
+\end{itemize}
+
+\subsection{Resource use issues}
+\begin{itemize}
+\item RU-1: When in logging mode, the system shall relinquish all ports between logging episodes.
+\end{itemize}
+
+\subsection{Security requirements}
+\begin{itemize}
+\item SE-1: Identified use cases shall not require super-user privileges.
+\item SE-2: pysungrow scripts shall refuse to run as root.
+\end{itemize}
+
+\subsection{Software quality attributes}
+\begin{itemize}
+\item Usability-1: Output in interactive mode shall correspond to messages written to data and error streams in log mode to the extent possible.
+\end{itemize}
+
+\chapter{Glossary}
+\begin{itemize}
+\item (Device) interface: Interface allowing user or logging system to interact with attached power management device.
+\item Logging episode: period during which configured devices are read for logging.
+\item Port: pair of channels for serial data to transmit data to and receive data from a device.
+\item Power management device: a device involved in management or measurement of power supply; for example a solar power charge controller or inverter.
+\item Power monitoring system: the present system as described here.
+\item Status page: status information record sent by power management device.
+\item (Device) emulator: non-interactive program that imitates the behaviour of a power management device.
+\item Message
+\item Recurring event
+\item Field
+\item Transaction
+\item File
+\item Log stream
+\end{itemize}
+
+\chapter{Data dictionary and data model}
+\section{Data records}
+
+
+\chapter{Rules and conventions}
+\begin{itemize}
+\item RC-1: Metadata output shall be in YAML, and shall be readable by \texttt{cfplot}.
+\item RC-2: Configuration shall occur at 4 tiers:
+  \begin{itemize}
+  \item System-wide configuration
+  \item User-specific configuration (home directory)
+  \item Local configuration (working directory)
+  \item Command-line (for script) or API (interactive)
+  \end{itemize}
+\item RC-3: Standard status field names and sequence
+\item RC-4: Standard device configuration field names and sequence
+\item RC-5: Standard device history field names and sequence
+\item RC-6: Use CF standard attributes for for nodata, units. Units shall conform to CF, meaning that units must be acceptable to udunits2.
+\item RC-7: Interactive-mode messages and responses shall resemble log format as closely as possible, e.g., \verb|", ".join()| of interactive response gives data record.
+\item RC-8: Output files shall be text, plottable with Excel or other spreadsheets. They shall begin with a header with metadata, configuration, history, and other ``light'' data, followed by data as delimited text such that lines can be added by opening the data file in ``append'' mode.
+\end{itemize}
+
+
+%\renewcommand{\baselinestretch}{1.0}\normalsize
+%\bibliographystyle{dissertation}
+%\phantomsection\addcontentsline{toc}{chapter}{\bibname}
+%\bibliography{$HOME/research/literature/literature.bib}
+%\renewcommand{\baselinestretch}{\linesep}\normalsize
+
+%\appendix
+
+\end{document}

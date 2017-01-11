@@ -1,0 +1,14 @@
+Metadata-Version: 1.0
+Name: sungrow
+Version: 0.1b7
+Summary: sungrow
+Home-page: UNKNOWN
+Author: Alex Cobb
+Author-email: acobb@smart.mit.edu
+License: UNKNOWN
+Description: Interaction with solar power management devices
+        
+              Allows communication with several solar power management devices
+              with serial interfaces from Sungrow, OutBack, and ASP.
+              
+Platform: UNKNOWN

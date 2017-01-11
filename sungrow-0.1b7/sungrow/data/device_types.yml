@@ -1,0 +1,950 @@
+# pysungrow device type configuration file
+sungrow_charge_controller:
+  manufacturer: Sungrow
+  part_number: SD4860
+  messages:
+    status_query:
+      code: ed 03 03 f3
+      length: 4
+      fields: []
+    status_page:
+      code: ed 03 00 00
+      length: 60
+      struct: ">4s12i4B4s"
+      raw_keys:
+        [signature,
+         load_current, solar_current, battery_voltage,
+         charge_current, battery_temperature, daily_solar_energy,
+         daily_load_energy, total_stored_energy,
+         load_short_circuit_count, load_overcurrent_count,
+         battery_overcharge_count, battery_overdischarge_count,
+         load_short_circuit, load_overcurrent,
+         battery_overcharge, battery_overdischarge_alarm_flags,
+         checksum]
+      tenths:
+        - load_current
+        - solar_current
+        - battery_voltage
+        - charge_current
+      bitfields:
+        ## these three are a bit of a trick; value & 255 for truth value
+        load_short_circuit:
+          255: load_short_circuit
+        load_overcurrent:
+          255: load_overcurrent
+        battery_overcharge:
+          255: battery_overcharge
+        battery_overdischarge_alarm_flags:
+          1: battery_overdischarge
+          2: battery_backup_alarm
+      fields:
+        -
+          name: load_current
+          dtype: float32
+          units: A
+        -
+          name: solar_current
+          dtype: float32
+          units: A
+        -
+          name: battery_voltage
+          dtype: float32
+          units: V
+        -
+          name: charge_current
+          dtype: float32
+          units: A
+        -
+          name: battery_temperature
+          dtype: float32
+          units: degree_C
+        -
+          name: daily_solar_energy
+          dtype: float32
+          units: kWh
+        -
+          name: daily_load_energy
+          dtype: float32
+          units: kWh
+        -
+          name: total_stored_energy
+          dtype: float32
+          units: kWh
+        -
+          name: load_short_circuit_count
+          dtype: int32
+          units: 1
+        -
+          name: load_overcurrent_count
+          dtype: int32
+          units: 1
+        -
+          name: battery_overcharge_count
+          dtype: int32
+          units: 1
+        -
+          name: battery_overdischarge_count
+          dtype: int32
+          units: 1
+        -
+          name: load_short_circuit
+          dtype: bool
+        -
+          name: load_overcurrent
+          dtype: bool
+        -
+          name: battery_overcharge
+          dtype: bool
+        -
+          name: battery_overdischarge
+          dtype: bool
+        -
+          name: battery_backup_alarm
+          dtype: bool
+    history_query:
+      code: ed 05 09 fb
+      length: 4
+      fields: []
+    history_page:
+      code: ed 05 09 fb
+      length: 248
+      struct: '>4s120hI'
+      raw_keys:
+        - daily_battery_voltage_maximum
+        - daily_battery_voltage_minimum
+        - daily_total_solar_charge_production
+        - daily_total_load_charge_consumption
+      fields:
+        -
+          name: daily_battery_voltage_maximum
+          units: V
+          dtype: [float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16]
+          notes: 0.1 V resolution
+        -
+          name: daily_battery_voltage_minimum
+          units: V
+          dtype: [float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16,
+                  float16, float16, float16, float16, float16, float16]
+          notes: 0.1 V resolution
+        -
+          name: daily_total_solar_charge_production
+          units: Ah
+          dtype: [int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16]
+          notes: 1 Ah resolution
+        -
+          name: daily_total_load_charge_consumption
+          units: Ah
+          dtype: [int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16,
+                  int16, int16, int16, int16, int16, int16]
+          notes: 1 Ah resolution
+    configuration_query:
+      code: ed 06 26 19
+      length: 4
+      fields: []
+    configuration_page:
+      code: ed 06 26 19
+      length: null
+      ints:
+        - DC_voltage_grade
+        - charging_mode
+        - 直流电压温度补偿系数
+        - 内部保存参数RY
+        - 语言设置
+        - 过放后负载关断选择
+        - 过充后负载关断选择
+      floats:
+        - overvoltage_protection_threshold
+        - overvoltage_recovery_threshold
+        - undervoltage_protection_threshold
+        - undervoltage_recovery_threshold
+        - PV_voltage_1
+        - PV_voltage_2
+        - PV_voltage_3
+        - PV_voltage_4
+        - PV_voltage_5
+        - PV_voltage_6
+        - 充电滞回百分比
+        - 次要负载关断值
+        - 次要负载恢复值
+        - 油机启动电压
+        - 油机关断电压
+        - 路灯启动日照值
+        - 路灯关断日照值
+        - 风机接通电压
+        - 风机卸载电压
+        - 均充电压
+        - 浮充电压
+        - 启动电压
+      fields:
+        -
+          name: user_code
+          dtype: S6
+        -
+          name: override_code
+          dtype: S6
+        -
+          name: DC_voltage_grade
+          dtype: uint8
+        -
+          name: charging_mode
+          units: uint8
+        -
+          name: overvoltage_protection_threshold
+          units: V
+          dtype: float32
+        -
+          name: overvoltage_recovery_threshold
+          units: V
+          dtype: float32
+        -
+          name: undervoltage_protection_threshold
+          units: V
+          dtype: float32
+        -
+          name: undervoltage_recovery_threshold
+          units: V
+          dtype: float32
+        -
+          name: PV_voltage_1
+          units: V
+          dtype: float32
+        -
+          name: PV_voltage_2
+          units: V
+          dtype: float32
+        -
+          name: PV_voltage_3
+          units: V
+          dtype: float32
+        -
+          name: PV_voltage_4
+          units: V
+          dtype: float16
+        -
+          name: PV_voltage_5
+          units: V
+          dtype: float16
+        -
+          name: PV_voltage_6
+          units: V
+          dtype: float16
+        ## nothing from here on is known to be correct for units and
+        ##   dtype; these are placeholders
+        -
+          name: 充电滞回百分比
+          units: V
+          dtype: float32
+        -
+          name: 电流过载值
+          units: V
+          dtype: float32
+        -
+          name: 直流电压温度补偿系数
+          units: V
+          dtype: float32
+        -
+          name: 本机通讯地址
+          units: V
+          dtype: float32
+        -
+          name: 内部保存参数RY
+          units: V
+          dtype: float32
+        -
+          name: 未用1
+          units: V
+          dtype: float32
+        -
+          name: 未用2
+          units: V
+          dtype: float32
+        -
+          name: 光开时断时间
+          units: V
+          dtype: float32
+        -
+          name: 时控开通时间
+          units: V
+          dtype: float32
+        -
+          name: 时控关断时间
+          units: V
+          dtype: float32
+        -
+          name: 次要负载关断值
+          units: V
+          dtype: float32
+        -
+          name: 次要负载恢复值
+          units: V
+          dtype: float32
+        -
+          name: 油机启动电压
+          units: V
+          dtype: float32
+        -
+          name: 油机关断电压
+          units: V
+          dtype: float32
+        -
+          name: 路灯启动日照值
+          units: V
+          dtype: float32
+        -
+          name: 路灯关断日照值
+          units: V
+          dtype: float32
+        -
+          name: 风机接通电压
+          units: V
+          dtype: float32
+        -
+          name: 风机卸载电压
+          units: V
+          dtype: float32
+        -
+          name: 光开时断晨亮_亮到灭的时间
+          units: V
+          dtype: float32
+        -
+          name: 光开时断晨亮_灭到亮的时间
+          units: V
+          dtype: float32
+        -
+          name: 语言设置
+          units: V
+          dtype: float32
+        -
+          name: 过放后负载关断选择
+          units: V
+          dtype: float32
+        -
+          name: 过充后负载关断选择
+          units: V
+          dtype: float32
+        -
+          name: 均充电压
+          units: V
+          dtype: float32
+        -
+          name: 浮充电压
+          units: V
+          dtype: float32
+        -
+          name: 启动电压
+          units: V
+          dtype: float32
+        -
+          name: 动态稳压系数
+          units: V
+          dtype: float32
+        -
+          name: 静态稳压系数
+          units: V
+          dtype: float32
+        -
+          name: 均充时间
+          units: V
+          dtype: float32
+        -
+          name: 吸收时间
+          units: V
+          dtype: float32
+    configuration_setting:
+      code: ed 07 38 2c
+      length: null
+      fields:
+        not implemented
+
+sungrow_inverter:
+  manufacturer: Sungrow
+  part_number: SN481KS
+  notes: messages nominally have only one request type, but in fact the type of
+         request is indicated by a command type code in the 4th byte.
+  messages:
+    status_query:
+      code: 01 03 07 00 01
+      length: 13
+      fields: []
+    inverter_start:
+      code: 01 03 07 00 03
+      length: 13
+      fields: []
+    inverter_stop:
+      code: 01 03 07 00 04
+      length: 13
+      fields: []
+    alarm_sound_test:
+      code: 01 03 07 00 07
+      length: 13
+      fields: []
+    alarm_light_test:
+      code: 01 03 07 00 08
+      length: 13
+      fields: []
+    dismiss_alarm:
+      code: 01 03 07 00 0d
+      length: 13
+      fields: []
+    set_datetime:
+      code: 01 03 07 00 0f
+      length: 13
+      fields:
+        -
+          name: datetime
+          dtype: datetime
+    切到逆变供电:
+      code: 01 03 07 00 10
+      length: 13
+      fields: []
+    切到旁路市电供电:
+      code: 01 03 07 00 11
+      length: 13
+      fields: []
+    test_lcd_backlight:
+      code: 01 03 07 00 12
+      length: 13
+      fields: []
+    status_page:
+      code: 01 03 5e 00 01
+      length: 100
+      struct: '<5s21h1H10s6h5s7s6B4s3B2s2s'
+      raw_keys:
+        [signature,
+         shunt_input_A_voltage,
+         shunt_input_A_current,
+         shunt_input_A_frequency,
+         shunt_input_B_voltage,
+         shunt_input_B_current,
+         shunt_input_B_frequency,
+         shunt_input_C_voltage,
+         shunt_input_C_current,
+         shunt_input_C_frequency,
+         AC_output_A_voltage,
+         AC_output_A_current,
+         AC_output_A_frequency,
+         AC_output_B_voltage,
+         AC_output_B_current,
+         AC_output_B_frequency,
+         AC_output_C_voltage,
+         AC_output_C_current,
+         AC_output_C_frequency,
+         DC_voltage,
+         DC_current,
+         cabinet_temperature,
+         shutdown_delay,
+         unused_0,
+         DC_undervoltage_threshold,
+         DC_overvoltage_threshold,
+         DC_start_voltage,
+         shunt_undervoltage_threshold,
+         shunt_overvoltage_threshold,
+         shunt_start_voltage,
+         unused_1,
+         datetime,
+         machine_type,
+         with_shunt,
+         three_phase,
+         transformer_type,
+         LCD_type,
+         display_language,
+         unused_2,
+         inverter_communication_role,
+         status_byte_1,
+         status_byte_2,
+         unused_3,
+         checksum]
+      tenths:
+        [shunt_input_A_current,
+         shunt_input_A_frequency,
+         shunt_input_B_current,
+         shunt_input_B_frequency,
+         shunt_input_C_current,
+         shunt_input_C_frequency,
+         AC_output_A_current,
+         AC_output_A_frequency,
+         AC_output_B_current,
+         AC_output_B_frequency,
+         AC_output_C_current,
+         AC_output_C_frequency,
+         DC_current,
+         cabinet_temperature]
+      ## The documentation suggests that these values should be 1, 2...,
+      ##   but the example message they give uses 0, 1, ...
+      ##   Be alert for errors here.  In some cases, a "0" value of
+      ##   "default" has been added to allow testing with example data from
+      ##   the docs, even though they appear to be wrong.
+      mappings:
+        machine_type:
+          0: default
+          1: AC inverter
+          2: UPS
+        with_shunt:
+          0: default
+          1: True
+          2: False
+        three_phase:
+          0: default
+          1: False
+          2: True
+        transformer_type:
+          0: default
+          1: normal
+          2: switching
+          3: stand-alone three-phase
+        display_language:
+          ## docs indicate 1 for Chinese, 2 for English, but their example
+          ##   has 0; this hack adds "default" value so tests will pass with
+          ##   their test data
+          0: default
+          1: Chinese
+          2: English
+        inverter_communication_role:
+          0: intermediary
+          5: terminus
+      bitfields:
+        status_byte_1:
+          0: device_on
+          2: shunt_mode
+          3: abnormal_state
+          4: DC_undervoltage
+          5: DC_overvoltage
+          6: overload
+          7: short
+        status_byte_2:
+          4: bad_DC_setting
+      fields:
+        -
+          name: shunt_input_A_voltage
+          units: V
+          dtype: uint8
+        -
+          name: shunt_input_A_current
+          units: A
+          dtype: float16
+          notes: 0.1 A precision
+        -
+          name: shunt_input_A_frequency
+          units: Hz
+          dtype: float16
+          notes: 0.1 Hz precision
+        -
+          name: shunt_input_B_voltage
+          units: V
+          dtype: uint8
+          notes: three-phase only
+        -
+          name: shunt_input_B_current
+          units: A
+          dtype: float16
+          notes: 0.1 A precision. Three-phase only.
+        -
+          name: shunt_input_B_frequency
+          units: Hz
+          dtype: float16
+          notes: 0.1 Hz precision. Three-phase only.
+        -
+          name: shunt_input_C_voltage
+          units: V
+          dtype: uint8
+          notes: Three-phase only
+        -
+          name: shunt_input_C_current
+          units: A
+          dtype: float16
+          notes: 0.1 A precision. Three-phase only.
+        -
+          name: shunt_input_C_frequency
+          units: Hz
+          dtype: float16
+          notes: 0.1 Hz precision. Three-phase only.
+        -
+          name: AC_output_A_voltage
+          units: V
+          dtype: uint8
+        -
+          name: AC_output_A_current
+          units: A
+          dtype: float16
+          notes: 0.1 A precision
+        -
+          name: AC_output_A_frequency
+          units: Hz
+          dtype: float16
+          notes: 0.1 Hz precision
+        -
+          name: AC_output_B_voltage
+          units: V
+          dtype: uint8
+          notes: three-phase only
+        -
+          name: AC_output_B_current
+          units: A
+          dtype: float16
+          notes: 0.1 A precision. Three-phase only.
+        -
+          name: AC_output_B_frequency
+          units: Hz
+          dtype: float16
+          notes: 0.1 Hz precision. Three-phase only.
+        -
+          name: AC_output_C_voltage
+          units: V
+          dtype: uint8
+          notes: Three-phase only
+        -
+          name: AC_output_C_current
+          units: A
+          dtype: float16
+          notes: 0.1 A precision. Three-phase only.
+        -
+          name: AC_output_C_frequency
+          units: Hz
+          dtype: float16
+          notes: 0.1 Hz precision. Three-phase only.
+        -
+          name: DC_voltage
+          units: V
+          dtype: uint8
+        -
+          name: DC_current
+          units: A
+          dtype: float16
+          notes: 0.1 A precision.
+        -
+          name: cabinet_temperature
+          units: degree_C
+          dtype: float16
+          notes: 0.1 degree precision
+        -
+          name: shutdown_delay
+          units: s
+          dtype: uint16
+        -
+          name: DC_undervoltage_threshold
+          units: V
+          dtype: uint8
+        -
+          name: DC_overvoltage_threshold
+          units: V
+          dtype: uint8
+        -
+          name: DC_start_voltage
+          units: V
+          dtype: uint8
+        -
+          name: shunt_undervoltage_threshold
+          units: V
+          dtype: uint8
+        -
+          name: shunt_overvoltage_threshold
+          units: V
+          dtype: uint8
+        -
+          name: shunt_start_voltage
+          units: V
+          dtype: uint8
+        -
+          name: datetime
+          dtype: datetime
+        -
+          name: machine_type
+          dtype: S11
+          notes: one of [AC inverter, UPS]
+        -
+          name: with_shunt
+          dtype: bool
+        -
+          name: three_phase
+          dtype: bool
+          notes: three-phase if True, one-phase if False
+        -
+          name: transformer_type
+          dtype: S23
+          notes: one of [normal, switching, stand-alone three-phase]
+        -
+          name: LCD_type
+          dtype: uint8
+          notes: unsure of interpretation
+        -
+          name: display_language
+          dtype: S7
+          notes: one of [Chinese, English]
+        -
+          name: inverter_communication_role
+          dtype: S12
+          notes: one of [intermediary, terminus]
+        -
+          name: device_on
+          dtype: bool
+        -
+          name: shunt_mode
+          dtype: bool
+          notes: True if in shunt mode, False if in inverter mode
+        -
+          name: abnormal_state
+          dtype: bool
+        -
+          name: DC_undervoltage
+          dtype: bool
+        -
+          name: DC_overvoltage
+          dtype: bool
+        -
+          name: overload
+          dtype: bool
+        -
+          name: short
+          dtype: bool
+        -
+          name: bad_DC_setting
+          dtype: bool
+
+outback_charge_controller:
+  manufacturer: OutBack
+  part_number: FlexMax 60/80
+  messages:
+    status_page:
+      length: 49
+      format:
+        - "\n{address:0>1}"
+        - "{unused_0:0>2}"
+        - "{charge_current:0>2}"
+        - "{solar_current:0>2}"
+        - "{solar_voltage:0>3}"
+        - "{daily_solar_energy:0>3}"
+        - "{charge_current_tenths:0>2}"
+        - "{aux_mode:0>2}"
+        - "{error_mode:0>3}"
+        - "{charge_mode:0>2}"
+        - "{battery_voltage:0>3}"
+        - "{daily_stored_charge:0>4}"
+        - "{unused_1:0>2}"
+        - "{checksum:0>3}\r"
+      raw_keys:
+        - address
+        - unused_0
+        - charge_current
+        - solar_current
+        - solar_voltage
+        - daily_solar_energy
+        - charge_current_tenths
+        - aux_mode
+        - error_mode
+        - charge_mode
+        - battery_voltage
+        - daily_stored_charge
+        - unused_1
+        - checksum
+      ints:
+        - solar_current
+        - solar_voltage
+        - aux_mode
+        - error_mode
+        - charge_mode
+        - daily_stored_charge
+      discard:
+        unused_0: "0"
+        unused_1: "00"
+        checksum: "000"
+      tenths:
+        - daily_solar_energy
+        - battery_voltage
+      mappings:
+        aux_mode:
+          0: disabled
+          1: diversion
+          2: remoted
+          3: manual
+          4: vent_fan
+          5: PV_trigger
+          6: float
+          7: error_output
+          8: night_light
+          9: PWM_diversion
+          10: low_battery
+        charge_mode:
+          0: silent
+          1: float
+          2: bulk
+          3: absorb
+          4: EQ
+      bitfields:
+        error_mode:
+          5: shorted_battery_sensor
+          6: too_hot
+          7: high_VOC
+      fields:
+        -
+          name: address
+          dtype: uint8
+          notes: device address; if charge controller is connected directly
+                 to MATE, will be 0. If device is connected to a HUB, address
+                 is 1-10 to indicate port number on the HUB.
+        -
+          name: charge_current
+          units: A
+          dtype: float32  # 0.1 A precision
+          notes: DC current controller is delivering to batteries, 0.1 A
+                 precision.
+        -
+          name: solar_current
+          units: A
+          dtype: uint8
+          notes: DC current controller is taking from PV array,
+                 1 A precision.
+        -
+          name: solar_voltage
+          units: V
+          dtype: uint8
+          notes: voltage seen at controller PV input terminals, 1
+                 V precision.
+        -
+          name: daily_solar_energy
+          units: kWh
+          dtype: float32
+          notes: running total of kWh produced by PV array, 0.1 kWh precision.
+                 Reset every morning when controller wakes up, or every 24
+                 h if there is no nightfall.
+        -
+          name: aux_mode
+          dtype: S12
+          notes: which aux mode is programmed, one of [disabled, diversion,
+                 remote, manual vent fan, PV trigger, float, ERROR output,
+                 night light, PWM diversion, low battery]. Check field
+                 aux_mode_active to determine whether the programmed aux mode
+                 is currently active.  See charge controller manual for mode
+                 descriptions.
+        -
+          name: aux_mode_active
+          dtype: bool
+          notes: indicates whether the programmed aux_mode is currently
+                 active.
+        -
+          name: shorted_battery_sensor
+          dtype: bool
+        -
+          name: too_hot
+          dtype: bool
+        -
+          name: high_VOC
+          dtype: bool
+        -
+          name: charge_mode
+          dtype: S6
+          notes: Charge mode, one of [silent, float, bulk, absorb, EQ].
+        -
+          name: battery_voltage
+          units: V
+          dtype: float32
+          notes: battery voltage, 0.1 V precision.
+        -
+          name: daily_stored_charge
+          units: Ah
+          dtype: uint32
+          notes: running total amp hours produced by charge controller,
+                 reset at midnight if connected to MATE.
+
+allegro_inverter:
+  manufacturer: Allegro
+  part_number: TC10/48
+  messages:
+    status_page:
+      length: null
+      format:
+        - "*0 ASP ALLEGRO V1.1 1000/24, 230V/50Hz"
+        - "*1 Vbatt = {DC_voltage:.1f} Vdc"
+        - "*2 Vout = {AC_output_voltage:d} Vac"
+        - "*3 Pac = {AC_output_power:d} W"
+        - "*4 Tint = {inverter_temperature:d} Cels"
+        - "*5 Sby Level={standby_level:d}"
+        - "*6 Remote {remote_enabled}"
+        - "*7 YOUR COMMAND:++"
+        - "*8 (00-99,++,--),<ENTER>"
+        - "*9 Legend:"
+        - "*A 00=Continuous"
+        - "*B 01-98=Sby Level"
+        - "*C 99=Off"
+        - "*D ++=Remote enable (On)"
+        - "*E --=Remote disable (Off)"
+      regexp:
+        - "(?P<machine_type>ASP[A-Za-z0-9.,/ ]+).*?$"
+        - "Vbatt\\s*=\\s*(?P<DC_voltage>[0-9.]+).*?$"
+        - "Vout\\s*=\\s*(?P<AC_output_voltage>[0-9]+).*?$"
+        - "Pac\\s*=\\s*(?P<AC_output_power>[0-9]+).*?$"
+        - "Tint\\s*=\\s*(?P<inverter_temperature>[0-9]+).*?$"
+        - "Sby Level\\s*=\\s*(?P<standby_level>[0-9]+).*?$"
+        - "Remote\\s+(?P<remote_enabled>[a-z]+)"
+      raw_keys:
+        - machine_type
+        - DC_voltage
+        - AC_output_voltage
+        - AC_output_power
+        - inverter_temperature
+        - standby_level
+        - remote_enabled
+      floats:
+        - DC_voltage
+      ints:
+        - AC_output_voltage
+        - AC_output_power
+        - inverter_temperature
+        - standby_level
+      mappings:
+        remote_enabled:
+          enabled: True
+          disabled: False
+      fields:
+        -
+          name: machine_type
+          dtype: S35
+        -
+          name: DC_voltage
+          units: V
+          dtype: float16
+        -
+          name: AC_output_voltage
+          units: V
+          dtype: int16
+        -
+          name: AC_output_power
+          units: V
+          dtype: int16
+        -
+          name: inverter_temperature
+          units: degree_C
+          dtype: int8
+        -
+          name: standby_level
+          units: 1
+          dtype: int8
+        -
+          name: remote_enabled
+          dtype: bool
+    enable_remote:
+      length: 2
+      fields: []
+    disable_remote:
+      length: 2
+      fields: []
+    set_standby_level:
+      length: 2
+      fields:
+        -
+          name: standby_level
+          units: 1
+          dtype: int8

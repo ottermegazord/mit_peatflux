@@ -1,0 +1,43 @@
+## Test system configuration file
+period: 1 h
+devices:
+  charge_controller:
+    device_type: sungrow_charge_controller
+    port: loop://
+  inverter:
+    device_type: sungrow_inverter
+    port: loop://
+  charge_controller_emulator:
+    device_type: sungrow_charge_controller_emulator
+    port: loop://
+  inverter_emulator:
+    device_type: sungrow_inverter_emulator
+    port: loop://
+actions:
+  - 
+    action: send
+    device: charge_controller
+    message_type: status_query
+  -
+    action: handle_incoming_messages
+  ## this is needed twice - once for the emulator to get the message,
+  ##   then for the device interface to get the response
+  ## talking to yourself is a lot of work!
+  -
+    action: handle_incoming_messages
+  -
+    device: charge_controller
+    action: send
+    message_type: history_query
+  -
+    action: handle_incoming_messages
+  -
+    action: handle_incoming_messages
+  -
+    device: inverter
+    action: send
+    message_type: status_query
+  -
+    action: handle_incoming_messages
+  -
+    action: handle_incoming_messages

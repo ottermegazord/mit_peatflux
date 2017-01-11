@@ -1,0 +1,384 @@
+# pysungrow device type example data
+sungrow_charge_controller:
+  -
+    message_type: status_query
+    hex_message: ed 03 03 f3
+    parameters: {}
+  -
+    message_type: history_query
+    hex_message: ed 05 09 fb
+    parameters: {}
+  -
+    message_type: configuration_query
+    hex_message: ed 06 26 19
+    parameters: {}
+  -
+    message_type: status_page
+    hex_message:
+      ed 03 00 00
+      00 00 00 23 00 00 00 34 00 00 00 34 00 00 00 34
+      ff ff ff 61 00 00 00 34 00 00 00 34 00 00 00 34
+      00 00 00 10 00 00 00 00 00 00 02 00 00 00 00 05
+      00 00 00 00
+      00 00 05 c0
+    parameters:
+      load_current: 3.5
+      solar_current: 5.2
+      battery_voltage: 5.2
+      charge_current: 5.2
+      battery_temperature: -159
+      daily_solar_energy: 52
+      daily_load_energy: 52
+      total_stored_energy: 52
+      load_short_circuit_count: 16
+      load_overcurrent_count: 0
+      battery_overcharge_count: 512
+      battery_overdischarge_count: 5
+      load_short_circuit: False
+      load_overcurrent: False
+      battery_overcharge: False
+      battery_overdischarge: False
+      battery_backup_alarm: False
+  -
+    message_type: history_page
+    hex_message:
+      ed 05 09 fb
+      01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4
+      01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4
+      01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4 01 f4
+      01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6
+      01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6
+      01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6 01 d6
+      00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18
+      00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18
+      00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18 00 18
+      00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16
+      00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16
+      00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16 00 16
+      00 00 3d 42
+    parameters:
+      daily_battery_voltage_maximum: 
+        [50.0, 50.0, 50.0, 50.0, 50.0, 50.0,
+        50.0, 50.0, 50.0, 50.0, 50.0, 50.0,
+        50.0, 50.0, 50.0, 50.0, 50.0, 50.0,
+        50.0, 50.0, 50.0, 50.0, 50.0, 50.0,
+        50.0, 50.0, 50.0, 50.0, 50.0, 50.0]
+      daily_battery_voltage_minimum:
+        [47.0, 47.0, 47.0, 47.0, 47.0, 47.0,
+         47.0, 47.0, 47.0, 47.0, 47.0, 47.0,
+         47.0, 47.0, 47.0, 47.0, 47.0, 47.0,
+         47.0, 47.0, 47.0, 47.0, 47.0, 47.0,
+         47.0, 47.0, 47.0, 47.0, 47.0, 47.0]
+      daily_total_solar_charge_production:
+        [24, 24, 24, 24, 24, 24,
+         24, 24, 24, 24, 24, 24,
+         24, 24, 24, 24, 24, 24,
+         24, 24, 24, 24, 24, 24,
+         24, 24, 24, 24, 24, 24]
+      daily_total_load_charge_consumption:
+        [22, 22, 22, 22, 22, 22,
+         22, 22, 22, 22, 22, 22,
+         22, 22, 22, 22, 22, 22,
+         22, 22, 22, 22, 22, 22,
+         22, 22, 22, 22, 22, 22]
+  -
+    message_type: configuration_page
+    hex_message:
+      ed 06 26 19 31 31 31 31 31 31 00 34 34 36 36 38 38 00 32 00 30
+      00 35 38 2e 30 00 35 37 2e 30 00 34 33 2e 32 00 34 39 2e 30 00
+      35 35 2e 30 00 35 34 2e 35 00 35 34 2e 31 00 35 34 2e 30 00 35
+      33 2e 35 00 35 33 2e 32 00 33 2e 30 00 30 36 30 00 31 00 30 30
+      31 00 30 00 30 30 30 30 30 30 00 30 30 31 00 30 38 30 30 30 30
+      00 31 38 30 30 30 30 00 30 31 30 31 30 30 00 34 34 2e 31 00 34
+      39 2e 31 00 34 35 2e 30 00 34 39 2e 35 00 32 30 2e 30 00 32 34
+      2e 30 00 35 35 2e 30 00 35 37 2e 30 00 30 34 30 30 30 30 00 30
+      34 33 30 30 30 00 33 00 36 00 39 00 35 36 2e 30 00 35 33 2e 35
+      00 35 31 2e 35 00 30 33 2e 38 00 30 32 2e 30 00 30 33 30 30 30
+      31 00 30 35 30 30 30 31 00 7a 00 00 22 ef
+    parameters:
+      user_code: "111111"
+      override_code: "446688"
+      DC_voltage_grade: 2
+      charging_mode: 0
+      overvoltage_protection_threshold: 58.0
+      overvoltage_recovery_threshold: 57.0
+      undervoltage_protection_threshold: 43.2
+      undervoltage_recovery_threshold: 49.0
+      PV_voltage_1: 55.0
+      PV_voltage_2: 54.5
+      PV_voltage_3: 54.1
+      PV_voltage_4: 54.0
+      PV_voltage_5: 53.5
+      PV_voltage_6: 53.2
+      充电滞回百分比: 3.0
+      电流过载值: "060"
+      直流电压温度补偿系数: 1
+      本机通讯地址: "001"
+      内部保存参数RY: 0
+      未用1: "000000"
+      未用2: "001"
+      光开时断时间: "080000"
+      时控开通时间: "180000"
+      时控关断时间: "010100"
+      次要负载关断值: 44.1
+      次要负载恢复值: 49.1
+      油机启动电压: 45.0
+      油机关断电压: 49.5
+      路灯启动日照值: 20.0
+      路灯关断日照值: 24.0
+      风机接通电压: 55.0
+      风机卸载电压: 57.0
+      光开时断晨亮_亮到灭的时间: "040000"
+      光开时断晨亮_灭到亮的时间: "043000"
+      语言设置: 3
+      过放后负载关断选择: 6
+      过充后负载关断选择: 9
+      均充电压: 56.0
+      浮充电压: 53.5
+      启动电压: 51.5
+      ## ??? what's the story with these leading zeros?
+      动态稳压系数: "03.8"
+      静态稳压系数: "02.0"
+      均充时间: "030001"
+      吸收时间: "050001"
+  -
+    message_type: configuration_setting
+    hex_message:
+      ed 07 38 2c 31 31 31 31 31 31 00 34 34 36 36 38 38 00 32 00 30
+      00 35 38 2e 35 00 35 37 2e 32 00 34 33 2e 32 00 34 39 2e 30 00
+      35 35 2e 30 00 35 34 2e 35 00 35 34 2e 31 00 35 34 2e 30 00 35
+      33 2e 35 00 35 33 2e 32 00 33 2e 30 00 30 36 30 00 31 00 32 33
+      37 00 30 00 30 30 30 30 30 30 00 30 30 31 00 30 38 30 30 30 30
+      00 31 38 30 30 30 30 00 30 31 30 31 30 30 00 34 34 2e 31 00 34
+      39 2e 31 00 34 35 2e 30 00 34 39 2e 35 00 32 30 2e 30 00 32 34
+      2e 30 00 35 35 2e 30 00 35 37 2e 30 00 30 34 30 30 30 30 00 30
+      34 33 30 30 30 00 33 00 36 00 39 00 35 36 2e 30 00 35 33 2e 35
+      00 35 31 2e 35 00 30 33 2e 38 00 30 32 2e 30 00 30 33 30 30 30
+      31 00 30 35 30 30 30 31 00 7a 00 00 23 27
+    parameters:
+      not_implemented: foo
+
+sungrow_inverter:
+  -
+    message_type: status_query
+    hex_message:
+      01 03 07 00 01 00 00 00 00 00 00 c4 e7
+    parameters:
+      {}
+  -
+    message_type: status_page
+    hex_message:
+      01 03 5e 00 01 01 01 02 01 03 01
+      00 00 00 00 00 00 00 00 00 00 00
+      00 04 01 05 01 06 01 00 00 00 00
+      00 00 00 00 00 00 00 00 07 01 08
+      01 09 01 00 00 64 00 00 00 10 01
+      20 01 00 00 b4 00 1d 01 c8 00 a0
+      00 09 01 b9 00 dc 00 b0 04 64 04
+      50 08 13 12 08 20 00 00 00 00 00
+      00 00 00 00 00 00 04 00 00 00 ea
+      73
+    parameters:
+      shunt_input_A_voltage: 257
+      shunt_input_A_current: 25.8
+      shunt_input_A_frequency: 25.9
+      shunt_input_B_voltage: 0
+      shunt_input_B_current: 0.0
+      shunt_input_B_frequency: 0.0
+      shunt_input_C_voltage: 0
+      shunt_input_C_current: 0.0
+      shunt_input_C_frequency: 0.0
+      AC_output_A_voltage: 260
+      AC_output_A_current: 26.1
+      AC_output_A_frequency: 26.2
+      AC_output_B_voltage: 0
+      AC_output_B_current: 0.0
+      AC_output_B_frequency: 0.0
+      AC_output_C_voltage: 0
+      AC_output_C_current: 0.0
+      AC_output_C_frequency: 0.0
+      DC_voltage: 263
+      DC_current: 26.4
+      cabinet_temperature: 26.5
+      shutdown_delay: 0
+      DC_undervoltage_threshold: 180
+      DC_overvoltage_threshold: 285
+      DC_start_voltage: 200
+      shunt_undervoltage_threshold: 160
+      shunt_overvoltage_threshold: 265
+      shunt_start_voltage: 185
+      datetime: 2008-12-13 08:50:04
+      machine_type: default
+      with_shunt: default
+      three_phase: default
+      transformer_type: default
+      LCD_type: 0
+      display_language: default  ## see notes in device_types.yml
+      inverter_communication_role: intermediary
+      device_on: False
+      shunt_mode: True
+      abnormal_state: False
+      DC_undervoltage: False
+      DC_overvoltage: False
+      overload: False
+      short: False
+      bad_DC_setting: False
+  #    inverter_start:
+  #      code: 3
+  #    inverter_shutdown:
+  #      code: 4
+  #    alarm_sound_test:
+  #      code: 7
+  #    alarm_light_test:
+  #      code: 8
+  #    dismiss_alarm:
+  #      code: 13
+  #    set_datetime:
+  #      code: 15
+  #      fields:
+  #        -
+  #          name: datetime
+  #          dtype: datetime
+  #    :
+  #      code: 16
+  #    :
+  #      code: 17
+  #    test_LCD_backlight:
+  #      code: 18
+  -
+    message_type: status_page
+    hex_message:
+      01 03 5e 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+      00 00 dc 00 00 00 f4 01 00 00 00 00 00 00 00 00 00 00 00 00 38
+      00 00 00 85 01 42 ea 00 00 00 00 00 00 00 00 00 00 2b 00 3c 00
+      31 00 a0 00 f2 00 b6 00 dc 00 c8 00 64 08 05 06 06 00 00 20 01
+      01 01 01 01 02 00 00 00 00 05 04 01 00 00 3d 31
+    parameters:
+      shunt_input_A_voltage: 0
+      shunt_input_A_current: 0
+      shunt_input_A_frequency: 0
+      shunt_input_B_voltage: 0
+      shunt_input_B_current: 0.0
+      shunt_input_B_frequency: 0.0
+      shunt_input_C_voltage: 0
+      shunt_input_C_current: 0.0
+      shunt_input_C_frequency: 0.0
+      AC_output_A_voltage: 220
+      AC_output_A_current: 0
+      AC_output_A_frequency: 50.0
+      AC_output_B_voltage: 0
+      AC_output_B_current: 0.0
+      AC_output_B_frequency: 0.0
+      AC_output_C_voltage: 0
+      AC_output_C_current: 0.0
+      AC_output_C_frequency: 0.0
+      DC_voltage: 56
+      DC_current: 0
+      cabinet_temperature: 38.9
+      shutdown_delay: 59970
+      DC_undervoltage_threshold: 43
+      DC_overvoltage_threshold: 60
+      DC_start_voltage: 49
+      shunt_undervoltage_threshold: 160
+      shunt_overvoltage_threshold: 242
+      shunt_start_voltage: 182
+      ## datetime is bad (month == 0), expect epoch
+      datetime: 1970-01-01 00:00:00
+      machine_type: AC inverter
+      with_shunt: True
+      three_phase: False
+      transformer_type: normal
+      LCD_type: 1
+      display_language: English
+      inverter_communication_role: terminus
+      device_on: False
+      shunt_mode: True
+      abnormal_state: False
+      DC_undervoltage: False
+      DC_overvoltage: False
+      overload: False
+      short: False
+      bad_DC_setting: False
+  
+outback_charge_controller:
+  -
+    message_type: status_page
+    raw_message:
+      ## this is the example given, but field sizes do not match
+      ## "\nA,00,08,06,034,031,00,05,000,02,262,000,000,059\r"
+      "\nA,00,08,06,034,031,00,05,000,02,262,0000,00,059\r"
+    parameters:
+      address: 0
+      charge_current: 8.0
+      solar_current: 6
+      solar_voltage: 34
+      daily_solar_energy: 3.1
+      aux_mode: PV_trigger
+      aux_mode_active: False
+      shorted_battery_sensor: False
+      too_hot: False
+      high_VOC: False
+      charge_mode: bulk
+      battery_voltage: 26.2
+      daily_stored_charge: 0
+  -
+    message_type: status_page
+    raw_message:
+      ## this is the example given, but field sizes do not match
+      ## "\nD,00,07,05,034,031,04,05,000,02,262,000,000,064\r"
+      "\nD,00,07,05,034,031,04,05,000,02,262,0000,00,064\r"
+    parameters:
+      address: 3
+      charge_current: 7.4
+      solar_current:  5
+      solar_voltage: 34
+      daily_solar_energy: 3.1
+      aux_mode: PV_trigger
+      aux_mode_active: False
+      shorted_battery_sensor: False
+      too_hot: False
+      high_VOC: False
+      charge_mode: bulk
+      battery_voltage: 26.2
+      daily_stored_charge: 0
+
+allegro_inverter:
+  -
+    message_type: status_page
+    raw_message:
+      "*0 ASP ALLEGRO V1.1 1000/24, 230V/50Hz\r\n\
+       *1 Vbatt = 24.7 Vdc\r\n\
+       *2 Vout = 227 Vac\r\n\
+       *3 Pac = 930 W\r\n\
+       *4 Tint = 35 Cels\r\n\
+       *5 Sby Level=99\r\n\
+       *6 Remote enabled\r\n\
+       *7 YOUR COMMAND:++\r\n\
+       *8 (00-99,++,--),<ENTER>\r\n\
+       *9 Legend:\r\n\
+       *A 00=Continuous\r\n\
+       *B 01-98=Sby Level\r\n\
+       *C 99=Off\r\n\
+       *D ++=Remote enable (On)\r\n\
+       *E --=Remote disable (Off)"
+    parameters:
+      machine_type: ASP ALLEGRO V1.1 1000/24, 230V/50Hz
+      DC_voltage: 24.7
+      AC_output_voltage: 227
+      AC_output_power: 930
+      inverter_temperature: 35
+      standby_level: 99
+      remote_enabled: True
+  -
+    message_type: enable_remote
+    raw_message: '++'
+    parameters: {}
+  -
+    message_type: disable_remote
+    raw_message: '--'
+    parameters: {}
+  -
+    message_type: set_standby_level
+    raw_message: "07"
+    parameters:
+      standby_level: 7

@@ -1,0 +1,180 @@
+pysungrow version 0.1
+=====================
+
+Copyright (c) 2012, 2013
+Alex Cobb
+All rights reserved.
+
+
+License information
+-------------------
+
+See the file "LICENSE" for information on the history of this
+software, terms & conditions for usage, and a DISCLAIMER OF ALL
+WARRANTIES.
+
+All trademarks referenced herein are property of their respective
+holders.
+
+
+What is pysungrow?
+------------------
+
+pysungrow is is a Python library and script for interaction with power
+management devices with serial interfaces.  The name comes from its
+initial use with Sungrow solar power devices using their RS-485
+interface, but has grown to accommodate other devices we're using.
+
+
+Documentation
+-------------
+
+The docs/ subdirectory of the directory containing this file has
+documentation for users (pysungrow.pdf, pysungrow.info), some
+technical documentation regarding the implementation of the package
+(technical_specification.pdf) and the requirements document written to
+motivate and circumscribe the capabilities of the package
+(pysungrow_requirements.pdf).  The source files required to build the
+documentation are also in the doc/ subdirectory, but the PDFs will
+have been built prior to distribution of the package, so there is no
+need to rebuild them unless you have edited the source files as part
+of package development.  Building the documentation requires texi2pdf
+and pdflatex as well as several LaTeX packages included in standard
+LaTeX distributions.
+
+
+Bug reports
+-----------
+
+If you find one, you can report it on the peatflux wiki at
+http://peatflux.censam.org/projects/peatflux
+(use "New Ticket").  I'll automatically get an e-mail when you submit
+the ticket.
+
+
+Questions
+---------
+
+For help, if you can't find it in the manuals, you can contact me at
+alex.cobb@smart.mit.edu.  But do look in the manuals first.  Really.
+
+
+Build and installation instructions
+===================================
+
+Pysungrow requires two external packages, PySerial (version >= 2.5)
+and PyYAML.
+
+PySerial is available from http://pypi.python.org/pypi/pyserial.
+PyYAML can be installed to use a fast C-based library, libYAML, or as
+a Python-only version.  To install them, go to
+http://pyyaml.org/wiki/PyYAML to get the source and follow the
+instructions there; if you want libYAML, you can get that from
+http://pyyaml.org/wiki/LibYAML.
+
+If you are on Windows, there may be pre-built packages available for
+you on those websites.  If not, you can still download the sources and
+install from source.  You may need something like 7-zip or Winzip to
+unpack the source archives (___.tar.gz, analogous to ___.zip).
+
+For building from source, the following instructions may work but
+could be out of date:
+
+$ wget http://pyyaml.org/download/libyaml/yaml-0.1.4.tar.gz
+$ tar -xzf yaml-0.1.4.tar.gz
+$ cd yaml-0.1.4
+$ ./configure && make && su -c 'make install'
+
+$ wget http://pyyaml.org/download/pyyaml/PyYAML-3.10.tar.gz
+$ tar -xzf PyYAML-3.10.tar.gz
+$ cd PyYAML-3.10
+$ python setup.py build && su -c 'python setup.py install'
+
+If you have an old version of PySerial installed, first get rid of it
+with
+$ su -c 'rm -fr /usr/lib/python2.6/site-packages/{pyserial,serial}*'
+Then say
+$ wget http://pypi.python.org/packages/source/p/pyserial/pyserial-2.6.tar.gz
+$ tar -xzf pyserial-2.6.tar.gz
+$ cd pyserial-2.6
+$ python setup.py build && su -c 'python setup.py install'
+
+
+Overo-specific notes
+--------------------
+
+On Overo COM, it's possible that the clock and timezone are not set,
+which will make the dates for logged data misleading.  To check this, say
+$ date
+and see if you get something reasonable; if not, you'll need to update
+the clock and possibly the timezone.  If the timezone is wrong, say
+$ su -c 'rm /etc/localtime; ln /usr/share/zoneinfo/Etc/GMT-8 /etc/localtime'
+$ su -c 'echo SGT > /etc/timezone'
+Then to fix the date via network time protocol, say
+$ su -c 'rdate -s time.mit.edu'
+or, if you do not have a working network connection,
+$ su -c "date -s 'Fri Feb 22 08:44:00 2013'"
+or similar.
+
+cron may not be installed on your Overo.  To find out, try typing
+$ crontab -l
+and you should get either your currently installed cron
+jobs or "no crontab for user" If you get something like
+-bash: crontab: command not found
+you probably need to install cron.  Look for a package at
+http://www.angstrom-distribution.org/feeds/unstable/ipk/glibc/armv7a/base
+Then download and install with
+$ su -c 'opkg install cron_3.0pl1-r8.6_armv7a.ipk'
+substituting the name of the package you downloaded.  Alternatively, 
+you could probably build Vixie cron from source, available at
+ftp://ftp.isc.org/isc/cron/cron_4.1.shar
+I have not tried this.
+
+If you want to be able to efficiently download new data from the
+Overo COM over the network, you can use rsync
+(http://rsync.samba.org/) although it is not necessary.
+These build notes work now (2012-09) but will change as rsync releases
+new versions.
+$ wget http://rsync.samba.org/ftp/rsync/rsync-3.0.9.tar.gz
+$ tar -xzf rsync-3.0.9.tar.gz
+$ cd rsync-3.0.9
+$ ./configure && make && su -c 'make install'
+
+
+Testing
+-------
+
+The pysungrow distribution includes a test suite that exercises the
+package on your system.  Many of the tests are platform-independent,
+and will have been tested before the package was released.  To run the
+tests, you need the nose testing framework for Python, available from
+http://nose.readthedocs.org/en/latest/
+
+To run the tests, after unpacking the sungrow distribution, change
+to the distribution directory and type
+nosetests
+
+One of the tests in the test suite, test_with_cron, saves your crontab
+file, creates a new one with a run of pysungrow, waits (at least a
+minute) for pysungrow to be executed by cron, and then restores your
+crontab file.  This means that 1) it is (unavoidably) slow, and 2) in
+case of an unknown bug it is conceivable that it could fail to restore
+your crontab file --- so back it up first.  If you want to avoid running
+this particular test, you can exclude it per normal nosetests usage by
+saying
+nosetests --exclude=test_with_cron
+(or ./check_errors.sh --exclude=test_with_cron).
+
+There are also static tests that can be run using the scripts
+./check_errors.sh and ./check_style.sh but these are for development
+and aren't needed to verify that pysungrow works on your platform.
+If you want to run those you need the pylint, pep8, and coverage
+packages.
+
+The tests now pass on Linux with Python 2.7.1 and 2.6.8, on Overo
+COM with Python 2.6.6 and on Windows 7 with Python 2.7.3.
+
+Happy logging!
+
+
+--Alex Cobb (alex.cobb@smart.mit.edu)

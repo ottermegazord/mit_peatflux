@@ -1,0 +1,888 @@
+%\documentclass[pdftex,openright,12pt,a4paper]{book}
+\documentclass[pdftex,oneside,12pt,a4paper]{book}
+\newcommand\linesep{1.68}
+
+\usepackage[includehead,margin=2.5cm]{geometry}
+\raggedbottom
+
+\usepackage{pysungrow}
+
+\begin{document}
+\title{pysungrow Technical specification}
+\author{Alex Cobb}
+
+\frontmatter
+
+
+%========================== Title page ================================
+\thispagestyle{empty}
+
+\vspace*{\stretch{1.68}}
+
+\noindent
+{\center\Huge\bfseries
+  \texttt{pysungrow} Technical Specification \\
+}
+
+\vspace*{\stretch{1}}
+
+{\center\large
+  \noindent
+  {\Large
+  Alex Cobb \\
+  }
+
+  \vspace{4ex}
+
+  \noindent
+  {\normalsize
+  Version 1, draft 1 \\
+  \today \\ }
+}
+
+%======================== Copyright page ==============================
+\pagebreak
+
+\thispagestyle{empty}
+
+\vspace*{0.33\textheight}
+\hspace{3em}
+\parbox{30em}{%
+\begin{small}
+  \noindent
+  \copyright 2012 Alexander Ruggles Cobb \\
+  All rights reserved.
+\end{small}
+}
+\vspace{\stretch{1}}
+
+\tableofcontents
+
+\mainmatter
+
+\chapter{Architecture}
+\subsection{Build vs.\ buy decisions}
+As far as we know, there is no software for logging the data from either the Sungrow or OutBack devices.
+
+\subsection{Rejected alternatives}
+originally had separate device and emulator classes, and also Inverter and ChargeController classes, with subclasses the cartesian product of these.  This ended up not making much sense because the emulator and device differ only really in which end of the messages they are on - they need to be able to pack and unpack the same formats.  Also, the need for generalization to other device types, and differences among devices by different manufacturers made the idea of classing devices into inverters vs.\ charge controllers seem less than helpful.
+
+\section{Subsystems and communication}
+each feature in requirements covered by at least one building block - architecture is how these fit together
+
+one block one responsibility; specify (minimize) communication among blocks
+
+devise rules for communication among subsystems
+
+loose coupling:  consider
+ * size - number of connections
+ * visibility - explicit is good
+ * flexibility - avoid implicit coupling from passing data structure
+
+try to make system-level diagram an acyclic graph    
+
+\begin{itemize}
+\item Logging
+\item Port abstraction (socket, files, pipes, serial)
+\item Configuration input / output
+\item Device-specific data and code
+  \begin{itemize}
+  \item data: command codes, message types; test data; fields: units, long\_name, \_FillValue, dtype
+  \item code: check-summing; message packing / unpacking
+  \end{itemize}
+\item Scripts
+\end{itemize}
+
+in general if you are running multiple emulators you want them all in the same mainloop.  Only concurrent behaviour you want is sometimes if you want to run several interfaces in one process and several emulators in a separate process
+
+\subsection{Rules}
+what you do when you get different kinds of responses goes into a schedule configuration file.
+
+receiving a particular message triggers an event
+
+\subsubsection{Major classes}
+
+should specify major classes, including interactions, state transitions, persistence
+
+\subsection{User interface}
+\subsubsection{Major classes}
+
+\subsection{Data access}
+configuration file reading; data and error log file writing
+
+\subsubsection{Major classes}
+
+\section{Major data structures}
+should describe major data structures and why they were chosen
+
+usually data should be accessed directly by only one subsystem or class
+
+should include any business rules to be conformed to and their impact
+
+should outline major elements of user interface
+
+cover management of limited resources, estimate usage in expected and extreme cases, e.g., database connections, threads, file handles, memory
+
+\section{Security}
+approach to security, threat model
+
+\section{Performance and scalability}
+Performance, in terms of speed or memory usage, is hardly a concern for us.  All that really matters at a practical level is cost and power consumption.  It doesn't look like scalability is much of an issue because I don't forsee the number of devices more than doubling at any point.
+
+Internationalization and localization (i18n, L10n) are worth thinking about for the future - it might make sense to allow Malay and Chinese modes as well as English, but this is beyond the scope of currently planned releases.
+
+\section{Error handling}
+Error messages need to be handled somewhat differently in interactive sessions and in unattended logging (log-on-startup). In interactive mode, errors should generate exceptions.  However, in unattended logging these need to be converted to logged errors.  Probably the way to do this is with \verb|sys.excepthook|; I think it is discussed in the documentation for the standard library \verb|logging| module.
+
+\section{Areas of potential infeasibility}
+Restart-on-powerup depends on how the Overo responds to restoration of power.  This is easy enough to check in hardware.  Not having it is not a major problem though; at worst we don't have this feature, or install a watchdog to turn on the device when battery voltage goes above a particular level.
+
+\chapter{Port abstraction}
+Tests:
+\begin{itemize}
+\item one process, one schedule
+\item process-subprocess communication
+\item interprocess communication
+  \begin{itemize}
+  \item no hardware loop
+  \item with hardware loop
+  \end{itemize}
+\end{itemize}
+
+RFC 2217 is a protocol for accessing over the network a serial port attached to a server.  Use for present purpose requires setting up a RFC 2217 server, then connecting with the pyserial client.
+
+\section{Within one process}
+\verb|loop://| URL does not know about instances in other processes, but should work fine for testing in one process.
+
+\section{Process--subprocess}
+os.pipe() with os.fork() (low-level) or subprocess module.  Requires communication through stdout and stderr, and select() on pipes only works on UNIX, not on Windows.
+
+\section{Separate processes without hardware loop}
+
+Testing in separate processes:  options are sockets / select() (most portable option) or named pipes (UNIX).
+
+On UNIX, a named pipe will work if it's opened in non-blocking mode.  First, set up the pipe:
+\begin{verbatim}
+>>> import os
+>>> os.mkfifo('named_pipe')
+>>> f = os.fdopen(os.open('named_pipe', os.O_RDONLY|os.O_NONBLOCK))
+\end{verbatim}
+Open a second terminal and say:
+\begin{verbatim}
+>>> import os
+>>> f = open('named_pipe', 'w+b')
+>>> f.write('bananas')
+>>> f.flush()
+\end{verbatim}
+and then on the first terminal:
+\begin{verbatim}
+>>> f.read()
+'bananas'
+\end{verbatim}
+
+On Windows, sockets seem to be the only way to go.
+
+Sockets have a client-server model, which is inherently asymmetric.  In principle it should be possible to make this symmetric --- resembling a serial port connection per pyserial --- by launching a third process to act as server for two clients (the two ``ends'' of the connection), simply passing data between them.  A second idea is to make the emulator the server;  launch the emulator as server on a socket, then communicate using \verb|serial_for_url()| for the interface.
+
+\begin{verbatim}
+>>> import socket
+>>> HOST = 'localhost'
+>>> PORT = 50001
+>>> s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+>>> s.bind((HOST, PORT))
+>>> s.listen(1)
+\end{verbatim}
+
+\begin{verbatim}
+>>> import serial
+>>> HOST = 'localhost'
+>>> PORT = 50001
+>>> port = serial.serial_for_url('socket://%s:%s' % (HOST, PORT))
+\end{verbatim}
+
+\begin{verbatim}
+>>> conn, addr = s.accept()
+\end{verbatim}
+Now the second terminal can write to the first:
+\begin{verbatim}
+>>> port.write('pancake')
+7
+\end{verbatim}
+and finally:
+\begin{verbatim}
+>>> conn.setblocking(0)
+>>> conn.recv(1024)
+'pancake'
+>>> conn.close()
+>>> s.shutdown(socket.SHUT_RDWR)
+\end{verbatim}
+
+\section{Separate processes with hardware loop}
+This means connecting two serial ports with a serial cable.
+
+
+\chapter{Scheduling subsystem}
+The scheduling subsystem, when activated, checks for events in a loop:
+\begin{itemize}
+\item Has restart of a named device occurred? (how can we detect this?)
+\item Has a system restart occurred?
+\item Has a scheduled event time point been passed since the last event loop iteration?
+\item Has a device received a message? 
+\end{itemize}
+For each ``yes'', an event is pushed onto the queue.
+
+It probably is not generally feasible to detect device restart.  It might be possible for \emph{some} devices, but it's not possible at the moment which, if any, this might be true for.  The next best thing might be to try to detect if a device has come ``back online'' - that is, if it was unresponsive on the previous iteration.
+
+The pattern here is the installation of an ``event handler'' for an event.  In effect, configuration of the scheduling subsystem amounts to setting up handlers or callbacks for events associated with particular devices.
+
+A system restart can be detected by comparing system uptime to a cached uptime.
+
+There are some potential issues with concurrency associated with the need for schedulers to save state if they are run by crond instead of in a daemon or other long-running process.  The essential issue is that a particular scheduler needs to be able to save its own state.  One possible approach is to use a file naming convention, that is, to ensure that a particular scheduler always gets its own state prefix.  Two broad approaches are: 1.\ leaving it to the user to come up with a prefix that won't collide with other ones they might use, or 2.\ using a hash to get a prefix guaranteed unique for some aspect of the configuration - at least, perhaps, a hash of the schedule configuration itself.  This means that one can't run multiple instances of the exact same scheduler, but that seems very unlikely to be a problem in practice.
+
+\chapter{Configuration subsystem}
+Configuration files are in YAML format, per the requirements.  Parameter specification in these files proceeds more or less mechanically from class instantiation argument lists.
+
+On UNIX, \verb|pysungrow| looks first in \verb|/etc/sungrow.d|, then in \verb|~/.sungrow| (where \verb|~| indicates the user's home directory) and finally the current working directory for configuration files.  Normally, the device type configuration file \verb|device_types.yml| lives in \verb|/etc/sungrow.d|.  The other configuration file types are device configuration files, normally called \verb|devices.yml|, and schedule configuration files, normally called \verb|schedule.yml|.  A typical configuration setup looks like this:
+\begin{verbatim}
+/etc/sungrow.d
++-- device_types.yml
+\end{verbatim}
+with device lists in the home directory:
+\begin{verbatim}
+~/.sungrow/
++-- devices.yml
+\end{verbatim}
+and \verb|schedule.yml| in the working directory.
+
+\verb|pysungrow| looks first at the global configuration in \verb|/etc/sungrow.d|, then \verb|~/.sungrow|, and finally the current working directory, with the latest taking precedence in each case.  Any preceding setting are overridden by options given on the command line.
+
+This configuration setup means are three modes of specifying parameters for objects in \verb|pysungrow|, using the YAML configuration file, via argument and keyword parameters in the Python API, and via command-line options.  Making these match one another as closely as possible is a priority.
+
+\section{Device type configuration}
+These are files to hold information about particular device types.  These files differ from the others in that users should not have to touch these.  If support for a new device is added to the system a new device type configuration file will need to be added.
+
+The device type configuration file should not need to be touched by users, and we maintain some discretion as to its content and format.  The idea, though, is to have a list of device type descriptions indicating device type, manufacturer, part number, and describing the message types associated with the device type.  The message type details include fields for message types that take parameters and include metadata that will go into the data log file for that device type.
+\begin{verbatim}
+# pysungrow device type configuration file
+-
+  device_type: sungrow_charge_controller
+  manufacturer: Sungrow
+  part_number: SD4860
+  messages:
+    status_query:
+      code: '\xed\x03\x03\xf3'
+    status_page:
+      code: '\xed\x03\x00\x00'
+      fields:
+        -
+          name: load_current
+          dtype: float32
+          units: A
+        -
+          name: solar_current
+          dtype: float32
+          units: A
+...
+\end{verbatim}
+\verb|device_type| is a unique string to identify the device type.  Note that these fields are the ultimate fields in the message, and may differ from native fields and dtypes.  For example, bit fields are split into multiple boolean variables, or, in the case of the OutBack charge controller, the integer and decimal parts of the charging current, separated in the native message, are combined into a single field in the parameterized message.  The message description amounts to documentation for the device type, to be verified with \verb|assert| --- if generated messages don't conform to the distributed version of \verb|device_types.yml|, it's a bug in the code.
+
+\section{Device configuration}
+The entries in the device configuration file include a field, \verb|device_type|, that must match verbatim the name of a device in the device types configuration file.  In turn, the \verb|device_id| field is used as a key by the actions configuration file, so those entries must correspond verbatim to the name of a defined device.
+\begin{verbatim}
+# pysungrow device configuration file
+-
+  device_id: charge_controller
+  device_type: sungrow_charge_controller
+  data_log_stream: charge_controller_data.csv
+  port:
+    log_stream: transactions.log
+    serial: /dev/ttyusb0
+-
+  device_id: inverter
+  device_type: sungrow_inverter
+  data_log_stream: inverter_data.csv
+  port:
+    log_stream: transactions.log
+    serial: /dev/ttyusb0
+\end{verbatim}
+
+\section{Schedule configuration}
+The schedule or action configuration file describes actions to perform periodically or in response to events or triggers.  Allowable actions are low level read, low level write, read, and write.  Triggers can be \verb|periodic|, in which case the parameters \verb|time_into| and \verb|interval| are required, \verb|system_restart|, meaning that the event is triggered when a system restart is detected, or \verb|device_back_online|, meaning that the event is triggered when the referred-to device is restarted or reconnected. 
+\begin{verbatim}
+# pysungrow actions configuration file
+-
+  device: charge_controller
+  trigger: periodic
+  time_into: 0 s
+  interval: 1 h
+  action: write "device.status_query()"
+  message_type: status_query
+-
+  device: charge_controller
+  trigger: periodic
+  time_into: 1 s
+  interval: 1 h
+  action: read "device.read()"
+-
+  device: charge_controller
+  trigger: system_restart
+  message_type: history_query
+-
+  device: charge_controller
+  trigger: device_back_online
+  message_type: configuration_query
+-
+  device: charge_controller
+  trigger: device_back_online
+  message_type: set_configuration
+  parameters: ...
+-
+  device: inverter
+  trigger: periodic
+  time_into: 0 s
+  interval: 1 h
+  action: write
+  message_type: status_query
+-
+  device: inverter
+  trigger: periodic
+  time_into: 0 s
+  interval: 1 h
+  action: read
+\end{verbatim}
+
+\section{Script}
+\begin{verbatim}
+sungrow [DEVICE_CFG] [-c CMDS] [-s SCHEDULE]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --verbose         report more about what is being done
+  -c CMDS, --commands CMDS
+                        commands to run on startup before executing
+                        any scheduled events
+  -s SCHEDULE, --schedule SCHEDULE
+                        actions to perform periodically or in response to
+                        triggers
+\end{verbatim}
+The configuration options in \verb|DEVICE_CFG| can be overridden or supplemented by command-line options that populate the same fields: \verb|device_type|, \verb|data_log_stream|, \verb|port|, \verb|transaction_log_stream|\ldots
+
+\chapter{Classes}
+Interactions, state transitions, persistence
+
+\section{Port}
+\begin{tabular}{|p{0.3\linewidth}p{0.25\linewidth}p{0.45\linewidth}|}
+\hline
+Port & \multicolumn{2}{l|}{(File infile, File outfile)} \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class data}}\\
+None && \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class methods}}\\
+None && \\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance data}}\\
+File & \verb|infile| & File from which data are read \\
+File  & \verb|outfile| & File to which data are written\\
+File & \verb|logfile| & File to which transactions are logged\\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance methods}}\\
+(Bytes, Datetime) & \verb|read()| & Read data from infile, returning bytes read and time of receipt\\
+Datetime  & \verb|write|(Bytes bytes) & Write data to outfile, returning bytes read and time of transmission\\\hline
+\end{tabular}
+
+\section{Message}
+\begin{tabular}{|p{0.2\linewidth}p{0.35\linewidth}p{0.45\linewidth}|}
+\hline
+Message & \multicolumn{2}{l|}{((Sequence with shape (n, 2)) parameters)} \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class data}}\\
+list of Field objects & \verb|fields| & Fields for message of this type \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class methods}}\\
+Message & \verb|from_bytes|(Bytes bytes) & Create message from native-format bytestring\\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance data}}\\
+Dict-like & \verb|parameters| & Key:value parameters for message \\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance methods}}\\
+Bytes & \verb|to_bytes|() & Create native-format byte string from message\\
+\hline
+\end{tabular}
+
+\section{Device}
+Subclasses need to be created for different device types.
+
+\noindent
+\begin{tabular}{|p{0.2\linewidth}p{0.35\linewidth}p{0.45\linewidth}|}
+\hline
+Device & \multicolumn{2}{l|}{(Port port, File data\_stream, File error\_stream)} \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class data}}\\
+Dict & \verb|message_types| & Mapping of message type keys to Message subclasses \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class methods}}\\
+Message & \verb|unpack|(Transaction transaction) & Unpack bytestring in transaction into a message object of appropriate type\\
+Transaction & \verb|pack|(Message message) & Pack message object into bytestring\\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance data}}\\
+Port & \verb|port| & Port from / to which data are read / written \\
+File & \verb|data_stream| & Stream to which data records are written \\
+File & \verb|error_stream| & Stream to which error and debugging messages are written \\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance methods}}\\
+(Message, & & \\
+Bytes, Datetime) & \verb|read|() & Read message from port\\
+(Bytes, Datetime) & \verb|write|(Message message) & Write message to port\\
+\hline
+\end{tabular}
+
+\subsection{SungrowChargeController(Device)}
+\subsubsection{Message types}
+
+\subsection{SungrowInverter(Device)}
+\subsubsection{Message types}
+
+\subsection{OutbackChargeController(Device)}
+\subsubsection{Message types}
+
+\subsection{AllegroInverter(Device)}
+\subsubsection{Message types}
+
+\section{Event}
+This class is just a container for scheduled messages.  It is implemented as a \verb|NamedTuple|. 
+
+\noindent
+\begin{tabular}{|p{0.2\linewidth}p{0.18\linewidth}p{0.62\linewidth}|}
+\hline
+Event & \multicolumn{2}{l|}{(TimeDelta time\_into, TimeDelta interval, Device device, Message message)} \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class data}}\\
+None && \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class methods}}\\
+None && \\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance data}}\\
+TimeDelta & \verb|time_into| & The time into the interval at which to perform the read / write\\
+TimeDelta & \verb|interval| & The interval at which to perform the read / write\\
+Device & \verb|device| & The device to perform the read / write\\
+Message or None & \verb|message| & The message to write, or \verb|None| if a read\\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance methods}}\\
+None \\\hline
+\end{tabular}
+
+\section{Schedule}
+Use \verb|crond| for timed logging, loop with sleep for emulation
+
+Emulation vs.\ logging is just a difference in the \emph{choice of events} to be directed to the device.
+
+\noindent
+\begin{tabular}{|p{0.2\linewidth}p{0.28\linewidth}p{0.52\linewidth}|}
+\hline
+Schedule & \multicolumn{2}{l|}{(Sequence of Events) events} \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class data}}\\
+None & & \\
+\hline\multicolumn{3}{|l|}{\small\emph{Class methods}}\\
+Schedule & \verb|from_file(File file)| & Create schedule from configuration file \\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance data}}\\
+list of Events & \verb|events| & Scheduled events \\
+\hline\multicolumn{3}{|l|}{\small\emph{Instance methods}}\\
+None & \verb|loop|() & Begin executing events according to their designated schedules \\\hline
+\end{tabular}
+
+\chapter{Device protocols}
+\section{Fields}
+fields defined by the manufacturer, i.e., the headers corresponding to parts of the (packed) message
+
+distinguished from fields presented to the user in the generic format
+
+In many cases some parts of the message are useless, in and of themselves, to the user, consisting either of only part of a value (e.g., tenths part of some value) or multiple values (e.g., error bytes, which tend to be bitfields of error flags).
+
+nonetheless the field datastructure is essentially the same in both cases
+
+the record will be transformed before it is presented to the user in unpacked form
+
+however the native field definitions are still useful for internal documentation and troubleshooting
+
+\subsection{Charge controller fields}
+\begin{supertabular}{ll}
+\emph{\small name} & \\
+PV voltage & \\
+PV current & \\
+Battery voltage & \\
+Charge current & \\
+Load current & \\
+Battery temperature & \\
+\end{supertabular}
+
+
+\subsection{Inverter fields}
+
+\section{Sungrow devices}
+The RS-485 interface to Sungrow devices are documented in white papers
+available from Sungrow (for \href{http://peatflux.censam.org/projects/peatflux/attachment/wiki/SungrowInterface/A-SD-00009-RJXY-01-C(1).pdf}{charge controller} and \href{http://peatflux.censam.org/projects/peatflux/attachment/wiki/SungrowInterface/SNSL上位机协议081208.pdf}{inverter}, dated 2008-12-08).  However, at the
+time of writing these are only available in Chinese.  What follows is my
+understanding of these documents; corrections will be appreciated.
+
+Sungrow devices use simple checksum-verified message protocols to
+communicate over the RS-485 bus via a \href{http://en.wikipedia.org/wiki/Duplex_%28telecommunications%29#Half-duplex}{half-duplex} connection.  The protocols for the charge controller and for the inverter are somewhat different.
+
+\subsection{Charge controller interface}
+The charge controller receives (mostly) 4-byte requests.  There are 4 request types with different 4-byte codes.  In the case of requests 1-3, that 4-byte code is the whole message; request 4 starts with that code but can be much longer.  Requests start with a 1-byte address (\verb|ed|), followed by a 2-byte command, and concluding with a 1-byte checksum (arithmetic sum of previous 3 bytes). There are 4 documented requests: binary status request (request 1, \verb|03 03|), binary history request (request 2, \verb|05 09|), ascii data request (request 3, \verb|06 26|), and parameter setting (request 4, \verb|07 38|), which can be much longer.  The 4-byte messages are verified by a sum in the 4th byte; longer messages are verified by comparing a big-endian sum in the last 4 bytes to the arithmetic sum of all preceding bytes.
+
+\subsubsection{Status query}
+Binary status request (request 1) has the following format:\\
+\begin{tabular}{llll}
+index & name & bytes & content\\
+0 & addr & 1 & \verb|ed|\\
+1-2 & cmd & 2 & \verb|03 03|\\
+3 & sum & 1 & \verb|f3|
+\end{tabular}
+
+\subsubsection{Status page}
+The 60-byte reply to request 1 is as follows:\\
+\begin{supertabular}{llll}
+index & name & bytes & content\\
+0 & addr & 1 & \verb|ed|\\
+1 & cmd1 & 1 & \verb|03|\\
+2-3 & reserved & 2 & \verb|00 00|\\
+4-7 & load current & 4 & 0.1 A\\
+8-11 & solar current & 4 & 0.1 A\\
+12-15 & battery voltage & 4 & 0.1 V\\
+16-19 & charge current & 4 & 0.1 A*\\
+20-23 & battery temperature & 4 & may be negative, 128 if no temperature sensor\\
+24-27 & total solar energy & 4 & 1 Ah\\
+28-31 & total load energy & 4 & 1 Ah\\
+32-35 & total stored energy & 4 & 1 Ah\\
+36-39 & load short circuit count & 4 & 1\\
+40-43 & load overcurrent count & 4 & 1\\
+44-47 & battery overcharge count & 4 & 1\\
+48-51 & battery overdischarge count & 4 & 1\\
+52 & load short circuit flag & 1 & \verb|00|: ok; \verb|ff|: short\\
+53 & load overcurrent flag & 1 & \verb|00|: ok; \verb|ff|: overcurrent\\
+54 & battery overcharge flag & 1 & \verb|00|: ok; \verb|ff|: overcharge\\
+55 & battery overdischarge alarm flags & 1 & bit 0: overdischarge; bit 1: backup alarm\\
+56-59 & checksum & 4 & sum of bytes 0-55; big-endian\\
+\end{supertabular}\\
+{*}signed int (4 bytes), big-endian, so that \verb|ff ff ff 61| == -159
+
+\subsubsection{History query}
+\noindent
+\begin{tabular}{llll}
+index & name & bytes & content\\
+0 & addr & 1 & \verb|ed|\\
+1-2 & cmd & 2 & \verb|05 09|\\
+3 & sum & 1 & \verb|fb|
+\end{tabular}
+
+\subsubsection{History page}
+Replies to request 2 are 248 bytes, as follows:\\
+\begin{tabular}{llll}
+index & name & bytes & content\\
+0 & addr & 1 & \verb|ed|\\
+1-2 & cmd & 2 & \verb|05 09|\\
+3 & checksum & 1 & \verb|fb|\\
+4-63 & daily voltage maximum (30 days) & 60* & resolution: 0.1 V\\
+64-123 & daily battery voltage minimum (30 days) & 60* & resolution: 0.1 V\\
+124-183 & daily total solar energy production (30 days) & 60* & resolution: 1 Ah\\
+184-243 & daily total load energy consumption (30 days) & 60* & resolution: 1 Ah\\
+244-247 & checksum & 4 & sum of bytes 0-243, big-endian
+\end{tabular}\\
+{*}2-byte integers, big-endian
+
+\subsubsection{Configuration query}
+\noindent
+\begin{tabular}{llll}
+index & name & bytes & content\\
+0 & addr & 1 & \verb|ed|\\
+1-2 & cmd & 2 & \verb|06 26|\\
+3 & sum & 1 & \verb|19|
+\end{tabular}
+
+\subsubsection{Configuration page}
+\noindent
+\begin{tabular}{llll}
+index & name & bytes & content\\
+0 & addr & 1 & \verb|ed|\\
+1-2 & cmd & 2 & \verb|06 26|\\
+3 & sum & 1 & \verb|19|\\
+4: & ascii data* & variable & terminating with \verb|7a| ("z")\\
+-4: & checksum & 4 & sum of all bytes from 0, big-endian
+\end{tabular}\\
+{*}Null-separated, ascii-encoded hex - that is, each sequence of non-null bytes can be decoded as the ASCII representation of a number.
+
+Null-separated fields are interpreted as follows:\\
+\noindent
+\begin{supertabular}{lll}
+field index & name & example\\
+0 & customer code & "111111"\\
+1 & override code & "446688"\\
+2 & DC voltage grade & "2"\\
+3 & charging mode & "0" \\
+4 & overvoltage protection threshold & "58.0" \\
+5 & overvoltage recovery threshold & "57.0" \\ 
+6 & undervoltage protection threshold & "43.2" \\
+7 & undervoltage recovery threshold & "49.0" \\
+8 & solar charging voltage 1 & "55.0" \\
+9 & solar charging voltage 2 & "54.5" \\
+10 & solar charging voltage 3 & "54.1" \\
+11 & solar charging voltage 4 & "54.0" \\
+12 & solar charging voltage 5 & "53.5" \\
+13 & solar charging voltage 6 & "53.2" \\
+14 & charging percentage (?) & "3.0" \\
+15 & current overload value & "060" \\
+16 & battery temperature compensation coefficient & "1" \\
+17 & \\
+\end{supertabular}\\
+... and many others
+
+\subsubsection{Parameter setting}
+\noindent
+\begin{tabular}{llll}
+index & name & bytes & content\\
+0 & addr & 1 & \verb|ed|\\
+1-2 & cmd & 2 & \verb|07 38|\\
+3 & sum & 1 & \verb|2c|\\
+4: & ascii data* & variable & terminating with \verb|7a| ("z")\\
+-4: & checksum & 4 & sum of all preceding bytes from 0, big-endian
+\end{tabular}\\
+{*}Null-separated, ascii-encoded hex - that is, each sequence of non-null bytes can be decoded as the ASCII representation of a number.
+
+\subsection{Inverter interface}
+The inverter receives a 13-byte request, including a 2-byte cyclic
+redundancy check (bytes 11 and 12 numbered from 0, i.e., the last two
+bytes). There is only one request message type for the inverter. The inverter
+will respond with a 100-byte response with a 2-byte little-endian
+\href{http://regregex.bbcmicro.net/crc-catalogue.htm#crc.cat.modbus}{MODBUS} cyclic redundancy check (bytes 98-99).
+
+\subsubsection{Message format}
+The inverter request has only one message type, but in fact the type of
+request is identified by byte 4, and the content of the ensuing 5 bytes
+can change accordingly.\\
+\begin{tabular}{llll}
+index & name & number of bytes & content\\
+0 & addr & 1 & \verb|01| \\
+1 & cmd & 1 & \verb|03| \\
+2-3 & & 2 & \verb|07 00| \\
+4 & Data0 & 1 & request \\
+5-10 & Data1-6 & 6 & data 1-6 (see below) \\
+11-12 & CrcL, CrcH & 1 & MODBUS CRC of preceding 11 bytes 
+\end{tabular}
+
+Data0 identifies the request type.  1 means inquiry, 15 sets datetime; other values do stuff like testing the alarm, shutting down or starting up the inverter, and testing the LCD backlight.  The reply is as follows:\\
+\begin{tabular}{llll}
+index & name & number of bytes & content \\
+0 & addr & 1 & \verb|01| \\
+1 & cmd & 1 & \verb|03| \\
+2-3 & & 2 & \verb|94 00| \\
+4 & Data0 & 1 & \\
+5-97 & Data1-Data93 & 93 & data 1-93 (see below) \\
+98-99 & CrcL, CrcH & 1 & MODBUS CRC of preceding 98 bytes 
+\end{tabular}
+
+Data 1-93 are interpreted as follows:\\
+\begin{supertabular}{llll}
+start index & name & bytes & content, units \\
+0 & shunt input A voltage & 2 & 1 V \\
+2 & shunt input A current & 2 & 0.1 A \\
+4 & shunt input A frequency & 2 & 0.1 Hz \\
+6 & shunt input B voltage** & 2 & 1 V \\
+8 & shunt input B current** & 2 & 0.1 A \\
+10 & shunt input B frequency** & 2 & 0.1 Hz \\
+12 & shunt input C voltage** & 2 & 1 V \\
+14 & shunt input C current** & 2 & 0.1 A \\
+16 & shunt input C frequency** & 2 & 0.1 Hz \\
+18 & AC output A voltage & 2 & 1 V \\
+20 & AC output A current & 2 & 0.1 A \\
+22 & AC output A frequency & 2 & 0.1 Hz \\
+24 & AC output B voltage** & 2 & 1 V \\
+26 & AC output B current** & 2 & 0.1 A \\
+28 & AC output B frequency** & 2 & 0.1 Hz \\
+30 & AC output C voltage** & 2 & 1 V \\
+32 & AC output C current** & 2 & 0.1 A \\
+34 & AC output C frequency** & 2 & 0.1 Hz \\
+36 & DC voltage & 2 & 1 V \\
+38 & DC current & 2 & 0.1 A \\
+40 & cabinet temperature & 2 & 0.1°  \\
+42 & shutdown delay* & 2 & 1 s \\
+44-51 & used with UPS only & 8 & \\
+52 & reserved & 2 & \\
+54 & DC undervoltage threshold & 2 & 1 V \\
+56 & DC overvoltage threshold & 2 & 1 V \\
+58 & DC start voltage & 2 & 1 V\\
+60 & shunt undervoltage threshold & 2 & 1 V \\
+62 & shunt overvoltage threshold & 2 & 1 V \\
+64 & shunt start voltage & 2 & 1 V \\
+66-70 & * & 5 & \\
+71 & second & 1 & 00-59 s, BCD*** \\
+72 & minute & 1 & 00-59 min, BCD*** \\
+73 & hour & 1 & 00-23 h, BCD*** \\
+74 & day & 1 & 01-31, BCD*** \\
+75 & month & 1 & \verb|01|-\verb|12|, BCD*** \\
+76 & year low byte & 1 & \verb|00|-\verb|99|, BCD*** \\
+77 & year high byte & 1 & \verb|20|, BCD*** \\
+78 & machine type & 1 & 1: AC inverter; 2: UPS \\
+79 & shunt type & 1 & 1: with shunt; 2: no shunt \\
+80 & voltage type & 1 & 1: one-phase; 2: three-phase \\
+81 & transformer type & 1 & 1: normal; 2: switching; 3: stand-alone three-phase\\
+82 & LCD type & 1 & \\
+83 & display language & 1 & 1: Chinese; 2: English \\
+84-87 & reserved & 4 & \\
+88 & inverter communication role & 1 & 0: intermediary; 5: terminus \\
+89 & status byte 1 & 1 & see below \\
+90 & status byte 2 & 1 & see below \\
+91 & reserved for status bytes & 2 &\\
+\end{supertabular}\\
+{*}greyed out\\
+{**}3-phase only\\
+{***}Datetime is \href{http://en.wikipedia.org/wiki/Binary-coded_decimal}{binary-coded decimal}, i.e., numeric value in tens and ones places are in the first and second hex digits (\verb|a|-\verb|f| values unused)
+
+Status byte 1 (byte 89) and status byte 2 (byte 90) are bitfields, to be interpreted as follows:\\
+\begin{tabular}{ll}
+bit & meaning\\
+0 & device on \\
+1 & * \\
+2 & shunt / inverter \\
+3 & *abnormal state \\
+4 & DC undervoltage \\
+5 & DC overvoltage \\
+6 & overload \\
+7 & short 
+\end{tabular}\\
+{*}greyed out
+
+Status byte 2 (0 / 1):\\
+\begin{tabular}{ll}
+bit & meaning\\
+0 & * \\
+1 & * \\
+2 & * \\
+3 & * \\
+4 & bad DC setting \\
+5 & * \\
+6 & * \\
+7 & * 
+\end{tabular}\\
+{*}greyed out
+
+\section{OutBack devices}
+Communication with OutBack devices is documented in the ``Mate Serial Communications Guide''. Documentation here is from reviewing Revision 4.04, dated 2008-10-21.
+
+We have an OutBack Flexmax 60-80 charge controller.  This is referred to as ``MX/FM'' in the communications guide.
+
+The Flexmax 60-80 \emph{cannot} know the load current because the load is connected directly to the charge controller.
+
+
+Communication with OutBack devices occurs via a ``Mate'', which communicates with OutBack devices through an RJ-45 connector and to a PC via RS-232.  Because the Mate uses the same USART to communicate with both OutBack devices and the PC, communication is always initiated by the Mate (guide, p.\ 5). It looks like this is on a fixed loop, with the Mate transmitting data to the PC and listening for PC commands once per second.
+
+As of Revision 4.04 of the communications guide, only the OutBack FX inverter accepts commands from the PC.  This means that communication with the Flexmax 60-80 is limited to reception of status pages transmitted by the Flexmax at 1 Hz.
+
+\subsection{Status page format}
+Fields in the 49-byte status page transmitted by a Flexmax 60-80 are delimited by commas (hex \verb|2c|). The message content is as follows:\\
+\begin{supertabular}{llll}
+\emph{\small index} & \emph{\small name} & \emph{\small bytes} & \emph{\small content}\\
+0 & start byte & 1 & \verb|"\n"|\\
+1 & address & 1 & \verb|"A"|-\verb|"K"| \\
+3 & , & 1 & \verb|","|\\
+4-5 & unused & 2 & \verb|00|\\
+6 & , & 1 & \verb|","|\\
+7-8 & charge current & 2 & 1 A, ASCII\\
+9 & , & 1 & \verb|","|\\
+10-11 & PV current & 2 & 1 A, ASCII\\
+12 & , & 1 & \verb|","|\\
+13-15 & PV voltage & 3 & V, ASCII\\
+16 & , & 1 & \verb|","|\\
+17-19 & Daily power & 3 & 0.1 kWh, ASCII*\\
+20 & , & 1 & \verb|","|\\
+21 & unused & 1 & \verb|"0"| \\
+22 & Tenths of charge current & 1 & 0.1 A, ASCII\\
+23 & , & 1 & \verb|","|\\
+24-25 & aux mode & 2 & ASCII \\
+26 & , & 1 & \verb|","|\\
+27-29 & error mode & 3 & ASCII \\
+30 & , & 1 & \verb|","|\\
+31-32 & charger mode & 2 & ASCII \\
+33 & , & 1 & \verb|","|\\
+34-36 & battery voltage & 3 & 0.1 V, ASCII\\
+37 & , & 1 & \verb|","|\\
+38-41 & Daily cumulative current & 4 & Ah \\
+42 & , & 1 & \verb|","|\\
+43-44 & unused & 2 & \verb|"00"|\\
+45 & , & 1 & \verb|","|\\
+46-48 & checksum & 3 & ASCII\\
+49 & end byte & 1 & \verb|"\r"|\\
+\end{supertabular}\\
+{*}reset when device wakes up, or every 24 h if no nightfall\\
+
+\subsubsection{Checksum}
+Checksum is sum of all the (non-comma, non-whitespace) ASCII decimal values in the message, except that the value for the address is the ASCII code for the character minus 48; for example, the value for \verb|'A'| is \verb|ord('A') - 48|, or 17.  Examples from the manual:
+\begin{itemize}
+\item \verb|checksum("A,00,08,06,034,031,00,05,000,02,262,000,000,059") = 59|
+\item \verb|checksum("D,00,07,05,034,031,04,05,000,02,262,000,000,064") = 64|
+\end{itemize}
+
+\subsubsection{Aux modes}
+\begin{tabular}{ll}
+\emph{\small bytes} & \emph{\small mode} \\
+"00" & disabled \\
+"01" & diversion \\
+"02" & remoted\\
+"03" & manual\\
+"04" & vent fan\\
+"05" & PV trigger\\
+"06" & float\\
+"07" & error output\\
+"08" & night light\\
+"09" & PWM diversion\\
+"10" & low battery\\
+\end{tabular}
+
+\subsubsection{Error modes}
+Error mode is the ASCII representation ("000" to "255") of a one-byte bitfield.  Note use of C-style indexing for bits (starting from 0).\\
+\begin{tabular}{ll}
+\emph{\small bit} & \emph{\small warning} \\
+0 & unused \\
+1 & unused \\
+2 & unused \\
+3 & unused\\
+4 & unused\\
+5 & shorted battery sensor\\
+6 & too hot\\
+7 & high VOC\\
+\end{tabular}
+
+\subsubsection{Charge mode}
+\begin{tabular}{ll}
+\emph{\small bytes} & \emph{\small mode} \\
+"00" & silent \\
+"01" & float \\
+"02" & bulk\\
+"03" & absorb\\
+"04" & EQ\\ 
+\end{tabular}
+
+\section{ASP Allegro inverter}
+Documentation for serial communication with the ASP Allegro inverter is described in its operation and installation manual, obtained by contacting Delta Renewable Energy Systems (Switzerland) AG at \verb|support@solar-inverter.com|.  The serial information and command set is very small.  Communication is via RS-232, 4800 baud, 8N1.  According to the manual, after connection with a terminal, the following information and help message is displayed:
+\begin{verbatim}
+*0 ASP ALLEGRO V1.1 1000/24, 230V/50Hz
+*1 Vbatt = 24.7 Vdc
+*2 Vout = 227 Vac
+*3 Pac = 930 W
+*4 Tint = 35 Cels
+*5 Sby Level=99
+*6 Remote enabled
+*7 YOUR COMMAND:++
+*8 (00-99,++,--),<ENTER>
+*9 Legend:
+*A 00=Continuous
+*B 01-98=Sby Level
+*C 99=Off
+*D ++=Remote enable (On)
+*E --=Remote disable (Off)
+\end{verbatim}
+Items 0--6 provide status information.  Items 7--E are a help message for interaction with the device.
+
+It is not clear how the Allegro knows when to output this message, because the manual implies that no command needs to be issued to receive the information / help message.  The issue for us is how to get it to provide the message again.  The trigger might be request-to-send (\verb|RTS|) or, perhaps more likely, data terminal ready (\verb|DTR|); PySerial allows control of these via \verb|Serial.setRTS| and \verb|Serial.setDTR|.
+
+The inverter responds to a (very) small command set of two-character codes that activate or deactivate the serial interface and adjust the inverter standby level; these need to be followed by some combination of carriage return (\verb|\r|) and line feed (\verb|\n|), probably \verb|\r\n|.  \verb|++| enables the serial interface for receipt of further codes, and deactivates the panel potentiometer; \verb|--| disables the serial interface and reactivates the panel potentiometer.  The two-digit numeric codes can shut off the inverter (\verb|99|), set the inverter at some intermediate standby level (\verb|01|--\verb|98|, \verb|50| corresponds to about 20 W), or set the inverter to operate ``continuously'' (\verb|00|).
+
+\chapter{Tests}
+\begin{itemize}
+  \item Round-tripping of pack / unpack; implies need for decimal format in some cases
+\end{itemize}
+
+%\renewcommand{\baselinestretch}{1.0}\normalsize
+%\bibliographystyle{dissertation}
+%\phantomsection\addcontentsline{toc}{chapter}{\bibname}
+%\bibliography{$HOME/research/literature/literature.bib}
+%\renewcommand{\baselinestretch}{\linesep}\normalsize
+
+%\appendix
+
+\end{document}

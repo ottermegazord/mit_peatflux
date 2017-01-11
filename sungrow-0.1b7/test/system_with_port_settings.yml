@@ -1,0 +1,14 @@
+## Example system configuration file
+period: 1 s
+devices:
+  charge_controller:
+    device_type: outback_charge_controller
+    port: loop://
+    port_settings:
+      baudrate: 19200
+      dsrdtr: True
+    data_streams:
+      status_page: status.csv
+actions:
+  -
+    action: handle_incoming_messages

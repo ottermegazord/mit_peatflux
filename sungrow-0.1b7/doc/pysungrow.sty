@@ -1,0 +1,72 @@
+%usepackage{indentfirst}
+%\usepackage{parskip} % if you want spaces between paragraphs, instead
+                      % of indentation
+\usepackage{pslatex}
+\usepackage{graphicx}
+\usepackage{supertabular}
+
+\usepackage[round,sort]{natbib}
+\renewcommand{\cite}{\citep}
+\setlength{\bibhang}{2em}
+\renewcommand{\bibname}{References}
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\fancyhf{}
+\fancyhead[LE,RO]{\bfseries\thepage}
+%\fancyhead[LO]{\rightmark}
+\fancyhead[LO]{\leftmark}
+\fancyhead[RE]{\leftmark}
+\renewcommand{\headrulewidth}{0.3pt}
+\fancypagestyle{plain}{%
+\fancyhead{}
+\fancyfoot[C]{\bfseries\thepage}
+\renewcommand{\headrulewidth}{0pt}
+}
+
+%% ==================== format customization ==================
+\usepackage{enumitem}
+\renewcommand{\labelitemii}{$\bullet$}
+\setlist{nolistsep}
+
+\setcounter{secnumdepth}{0}
+
+\newcommand{\chapteremph}{}
+\def\@makechapterhead#1{%
+  \vspace*{-60\p@}%
+  {\noindent\hspace{-0.7em} \raggedright \normalfont\huge\chapteremph
+    \ifnum \c@secnumdepth >\m@ne
+      \if@mainmatter
+        \thechapter\hspace{0.3em} %
+      \fi
+    \fi
+    \interlinepenalty\@M
+    \renewcommand{\baselinestretch}{1.0}\huge%
+    \hspace{0.5em}\parbox[t]{0.9\linewidth}{\raggedright\hspace{-0.7em} #1}\hfil
+    \par\nobreak
+    \vskip 24\p@
+    \renewcommand{\baselinestretch}{\linesep}\normalsize
+  }}
+\def\@makeschapterhead#1{%
+ \vspace*{-60\p@}%
+ {\noindent \hspace{-0.4em} \raggedright \normalfont\huge\chapteremph
+   \interlinepenalty\@M
+   #1\par\nobreak
+   \vskip 24\p@
+ }}
+
+%% ================== link support ===================
+\usepackage{color}
+\definecolor{bluish}{rgb}{0.20,0.29,0.46}
+\definecolor{darkblue}{rgb}{0.11, 0.14, 0.555}
+\definecolor{grey}{rgb}{0.1, 0.1, 0.1}
+% *always \use this last*
+\usepackage[letterpaper,colorlinks,breaklinks,pdftex,bookmarks=true,
+            linkcolor=bluish,citecolor=bluish,urlcolor=bluish]{hyperref}
+\hypersetup{
+  pdftitle={pysungrow Requirements},
+  pdfauthor={Alex Cobb},
+}

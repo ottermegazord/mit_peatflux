@@ -2,8 +2,8 @@
 
 import datetime
 from class_li7000 import li7000
-from class_valve import Valve
-import time
+
+#test
 
 """Serial Configuration"""
 port = '/dev/li7000'

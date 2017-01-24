@@ -1,0 +1,1 @@
+xml2csv --input "/home/pi/Desktop/cleaned.xml" --output "/home/pi/Desktop/cleaned_peat.csv" --tag "li840"

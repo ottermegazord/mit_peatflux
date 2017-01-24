@@ -8,17 +8,17 @@ from class_li840 import li840
 from class_valve import Valve
 
 """Serial Configuration"""
-port = '/dev/ttyUSB1'
+port = '/dev/li840'
 baudrate = 9600
 timeout = 1
 
 """Calibration Constants"""
-h2o_zero_interval = 0.05
-h2o_span_interval = 0.05
-co2_zero_interval = 0.05
-co2_span_interval = 0.05
+h2o_zero_interval = 3
+h2o_span_interval = 3
+co2_zero_interval = 3
+co2_span_interval = 3
 co2_ref = 0
-co2_span = [0, 0, 0]
+co2_span = [350, 390, 430]
 h2o_span = [0, 0, 0]
 
 """Log Files"""
@@ -31,8 +31,8 @@ for i in range(1, nodes + 1):
     f.close()
 
 #  Calibration Log
-log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_log.txt'
-cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_cal.xml'
+log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_log.xml'
+cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_cal.txt'
 
 """Time/Intervals/Periods"""
 li840_read_period = 10  # in seconds
@@ -43,8 +43,7 @@ close_chan_list = [32, 36, 38, 40]
 SWITCH_OPEN = 29
 SWITCH_CLOSE = 22
 SWITCH_INTERVAL = 0.5
-EC_channels = [1, 2, 3, 4]  # First element is zeroing Channel
-
+EC_channels = [9, 10, 11, 12]  # First element is zeroing Channel
 
 """Initialization"""
 test = li840(port, baudrate, timeout, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list, log_txt,
@@ -52,4 +51,5 @@ test = li840(port, baudrate, timeout, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list,
 valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 """Routine"""
-test.li840_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_span)
+while 1:
+	   test.li840_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_span)

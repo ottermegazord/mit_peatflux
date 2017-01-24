@@ -18,7 +18,7 @@ h2o_span_interval = 7.5
 co2_zero_interval = 7.5
 co2_span_interval = 7.5
 co2_ref = 0
-co2_span = [0, 0, 0]
+co2_span = [350, 390, 430]
 h2o_span = [0, 0, 0]
 
 """Log Files"""
@@ -43,7 +43,7 @@ close_chan_list = [32, 36, 38, 40]
 SWITCH_OPEN = 29
 SWITCH_CLOSE = 22
 SWITCH_INTERVAL = 0.5
-EC_channels = [1, 2, 3, 4]  # First element is zeroing Channel
+EC_channels = [9, 10, 11, 12]  # First element is zeroing Channel
 
 """Initialization"""
 test = li840(port, baudrate, timeout, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list, log_txt,
@@ -55,16 +55,17 @@ while 1:
     dt = datetime.datetime.now()
     try:
 	
-	if (dt.hour == 23 and dt.minute == 30):
+	if (dt.hour == 15 and dt.minute == 34):
 	   test.li840_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_span)
 
-        elif dt.minute == 0 or dt.minute == 10 or dt.minute == 20 or dt.minute == 30 or dt.minute == 40 or dt.minute == 50 :
+        elif dt.minute == 0 or dt.minute == 10 or dt.minute == 20 or dt.minute == 36 or dt.minute == 40 or dt.minute == 50 :
             print(dt.minute)
-            for i in range(0, len(files_timed)):
+            for i in range(1, 9):
                 valve.open_valve_channel(i, 0.15)
+		print("channel %d\n" %i)
+                print(files_timed[i-1])
                 time.sleep(li840_read_period)
-                print(files_timed[i])
-                test.li840_pullnow(files_raw, files_timed[i])
+                test.li840_pullnow(files_raw, files_timed[i-1])
                 valve.close_valve_channel(i, 0.15)
 
     except:

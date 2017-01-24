@@ -17,5 +17,5 @@ while 1:
 	i = input("Key Channel: \n")
 	print(i)
 	valve.open_valve_channel(i, 0.01)
-	time.sleep(30)
+	time.sleep(1)
 	valve.close_valve_channel(i,0.01)

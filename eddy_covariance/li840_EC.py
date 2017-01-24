@@ -55,7 +55,7 @@ while 1:
     dt = datetime.datetime.now()
     try:
 	
-	if (dt.hour == 15 and dt.minute == 34):
+	if (dt.hour == 23 and dt.minute == 30):
 	   test.li840_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_span)
 
         elif dt.minute == 0 or dt.minute == 10 or dt.minute == 20 or dt.minute == 36 or dt.minute == 40 or dt.minute == 50 :

@@ -19,8 +19,8 @@ co2_span = [350, 390, 430]
 h2o_span = [0, 0, 0]
 
 """Log Files"""
-log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/li7000_log.txt'
-cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/li7000_calibration.txt'
+log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/li7000_log.txt' #eddy inlet log file
+cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/li7000_calibration.txt' #shows exact time that calibration was initiated
 
 """Time/Intervals/Periods"""
 li7000_time_period = 0.1  # in seconds

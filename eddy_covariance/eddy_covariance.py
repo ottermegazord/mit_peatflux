@@ -5,7 +5,6 @@ from class_li7000 import li7000
 from class_valve import Valve
 import time
 import os.path
-import csv
 
 """Serial Configuration"""
 port = '/dev/li7000'
@@ -41,8 +40,6 @@ test = li7000(port, baudrate, time, SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, c
               cal_txt)
 
 """printing header file if log doesn not exist"""
-#print(test.li7000_header())
-
 if (not os.path.isfile(log_txt)):
     log = open('li7000_log.txt', 'w+')
     header=  "DATAH\tDate\tTime\t" + test.li7000_header()

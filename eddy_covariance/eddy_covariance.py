@@ -5,6 +5,7 @@ from class_li7000 import li7000
 from class_valve import Valve
 import time
 import os.path
+import csv
 
 """Serial Configuration"""
 port = '/dev/li7000'

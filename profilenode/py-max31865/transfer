@@ -1,0 +1,2 @@
+#!/bin/bash
+rsync -avs /home/pi/py-max31865/profile.txt pi@192.168.0.1:/media/usbhdd/logging/node4.txt

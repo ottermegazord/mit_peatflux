@@ -1,5 +1,4 @@
 import serial
-import datetime
 
 
 class Ge50a:

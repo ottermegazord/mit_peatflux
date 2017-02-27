@@ -1,8 +1,8 @@
 import os
 import xmlformatter
 
-fo = open("li840_timed2.xml", "r")
-num_lines = sum(1 for line in open('li840_timed2.xml'))
+fo = open("li840_log.xml", "r")
+num_lines = sum(1 for line in open('li840_log.xml'))
 fw = open("cleaned.xml", "a")
 formatter = xmlformatter.Formatter(indent="1", indent_char="\t", encoding_output="ISO-8859-1", preserve=["literal"])
 

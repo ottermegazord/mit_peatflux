@@ -14,8 +14,6 @@ class li840:
         self.cal_txt = cal_txt
 
     def li840_readline(self):
-        self.ser.flushInput()
-        self.ser.flushOutput()
         self.ser.write(bytes("<LI840><DATA>?</DATA></LI840>\n".encode()))
         output = self.ser.readline()
         return output

@@ -11,10 +11,10 @@ baudrate = 115200
 time = 1
 
 """Calibration Constants"""
-h2o_zero_interval = 3
-h2o_span_interval = 3
-co2_zero_interval = 3
-co2_span_interval = 3
+h2o_zero_interval = 0.5
+h2o_span_interval = 0.5
+co2_zero_interval = 0.5
+co2_span_interval = 0.5
 co2_ref = 0
 co2_span = [350, 390, 430]
 h2o_span = [0, 0, 0]

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+z#!/usr/bin/python
 
 """Li840 for Eddy Covariance System"""
 
@@ -18,7 +18,7 @@ h2o_span_interval = 7.5
 co2_zero_interval = 7.5
 co2_span_interval = 7.5
 co2_ref = 0
-co2_span = [350, 390, 430]
+co2_span = [0, 0, 0]
 h2o_span = [0, 0, 0]
 
 """Log Files"""
@@ -35,7 +35,7 @@ log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_lo
 cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/profile_nodes/li840_cal.txt'
 
 """Time/Intervals/Periods"""
-li840_read_period = 10  # in seconds
+li840_read_period = 2  # in seconds
 
 """Valve Pin Assignments"""
 open_chan_list = [31, 33, 35, 37]
@@ -55,17 +55,17 @@ while 1:
     dt = datetime.datetime.now()
     try:
 	
-	if (dt.hour == 23 and dt.minute == 30):
+	if (dt.hour == 14 and dt.minute == 00):
 	   test.li840_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_span)
 
-        elif dt.minute == 0 or dt.minute == 10 or dt.minute == 20 or dt.minute == 36 or dt.minute == 40 or dt.minute == 50 :
+        elif (dt.minute == 0 or dt.minute == 9 or dt.minute == 20 or dt.minute == 30 or dt.minute == 40 or dt.minute == 54) :
             print(dt.minute)
-            for i in range(1, 9):
+            for i in range(1, len(files_timed) + 1):
+		print("channel %d" %i)
                 valve.open_valve_channel(i, 0.15)
-		print("channel %d\n" %i)
-                print(files_timed[i-1])
                 time.sleep(li840_read_period)
-                test.li840_pullnow(files_raw, files_timed[i-1])
+                test.li840_pullnow(files_raw, files_timed[i])
+                print(files_timed[i])
                 valve.close_valve_channel(i, 0.15)
 
     except:

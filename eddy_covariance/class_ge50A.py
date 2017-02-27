@@ -12,7 +12,7 @@ class Ge50a:
 
     def ge50a_readline(self):
         raw_output = self.ser.readline()
-        output = int((raw_output.replace("@@@00ACK", "")).replace(";FF", ""))
+        output = raw_output.replace("@@@000ACK", "").replace(";FF", "")
         return output
 
     def ge50a_writelog(self, stringer):
@@ -24,4 +24,10 @@ class Ge50a:
         self.ser.write(bytes("@@@254CA?;FF".encode()))
         output = self.ge50a_readline()
         return output
+
+
+    def ge50a_writecomm(self, comm):
+	self.ser.write(bytes(self.ge50a_concatenator(comm)).encode())
+	output = self.ge50a_readline().strip()
+	return output
 

@@ -1,5 +1,4 @@
 import serial
-import xmlformatter
 from lxml import etree
 import time
 import datetime

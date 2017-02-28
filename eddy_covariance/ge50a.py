@@ -19,12 +19,11 @@ ge50a = Ge50a('/dev/ttyGE50A', baudrate, timeout, address)
 
 while 1:
     try:
-	f = open(log_txt, 'a')
+        f = open(log_txt, 'a')
         datetimer = datetime.datetime.now().isoformat()
-        output = datetimer+" "+ge50a.ge50a_writecomm("F?")+"\n"
-	f.write(output)
-	f.close()
+        output = datetimer + " " + ge50a.ge50a_writecomm("F?") + "\n"
+        f.write(output)
+        f.close()
 
     except:
         continue
-

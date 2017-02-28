@@ -88,7 +88,7 @@ class PID:
 adc_address1 = 0x6A #address of ADC CH1-CH4
 adc_address2 = 0x6B #address of ADC CH5-CH8
 dac = MCP4725(0x62) #address of DAC board
-DAC_RESOLUTION = 10  #DAC Resolution
+DAC_RESOLUTION = 12 #DAC Resolution
 
 # create byte array and fill with initial values to define size
 adcreading = bytearray()
@@ -140,23 +140,18 @@ def getadcreading(address, adcConfig):
 		t = ~(0x020000 - t)
 	return t * varMultiplier
 
-p=PID(6,0.37397,0.009349289)
+#dac.set_voltage(4096,True)
+time.sleep(1)
+p=PID(6,0.373970,0.009349289)
 p.setPoint(1.135)
+
+
 while True:
 
-
-    os.system('clear')	 
     changechannel(adc_address1, 0x9c)
-    measurement_value = getadcreading(adc_address1, 0x9c) # channel 1 address == 0x9c
-    pid = p.update(measurement_value)
+    measurement_value = getadcreading(adc_address1, 0x9c)
+    print("Input to PID: %.5f" % measurement_value)
+    pid = p.update(measurement_value) #because pump is sucking air in
+    print("Output from PID: %.5f" % pid)
     address = int(round(pid/5.030581 * 4095)) * -1
-    dac.setVoltage(address,False)	
-#    print("pid output to pump: %.5f" % pid)
- #   print("process variable from barometer: %.5f" %measurement_value)
-
-    file = open("testfile2.txt", "a")
-
-    file.write(" %.3f %.3f \n" % (measurement_value, pid))
-
-    file.close()
-	
+    dac.set_voltage(address, True)

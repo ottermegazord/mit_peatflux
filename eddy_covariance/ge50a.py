@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from class_ge50A import Ge50a
 import datetime
 

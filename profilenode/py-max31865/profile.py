@@ -5,8 +5,6 @@ import time
 import os
 import spi
 from math import sqrt
-from datetime import datetime
-import socket
 from subprocess import *
 
 """IP Declaration"""
@@ -15,8 +13,8 @@ cmd = "ip addr show eth0 | grep inet | awk '{print $2}' | cut -d/ -f1"
 
 """Anemometer Pulse Counter Configuration"""
 
-WIND_GPIO = 14  #output signal of anemometer GPI0 14
-
+WIND_GPIO = 14  # output signal of anemometer GPI0 14
+wind_time_period = 1 # time period for reading pulses from WIND_GPIO
 an = pigpio.pi()
 
 an.set_mode(WIND_GPIO, pigpio.INPUT)
@@ -24,20 +22,16 @@ an.set_pull_up_down(WIND_GPIO, pigpio.PUD_UP)
 
 wind_cb = an.callback(WIND_GPIO, pigpio.FALLING_EDGE)
 
-#count = 0
-#old_count = 0
-
 """ADCPi Configuration"""
 i2c_helper = ABEHelpers()
 bus = i2c_helper.get_smbus()
 adc = ADCPi(bus, 0x6A, 0x6B, 12)
-#adc = ADCPi(bus,0x6A,0x6B,12)
 
 """MAX31865 Configuration"""
 
 a = 0.00390830
 b = -0.0000005775
-c = 0 # 0 for temperature above 0 degrees
+c = 0  # 0 for temperature above 0 degrees
 rtdR = 400
 rtd0 = 100
 
@@ -59,8 +53,8 @@ REG_CONF_1SHOT = (1 << 5)
 REG_CONF_CONVERSION_MODE_AUTO = (1 << 6)
 REG_CONF_VBIAS_ON = (1 << 7)
 
-class max31865:
 
+class max31865:
     def __init__(self, name, bus, channel, _3wire=True):
         self.serial = name
         device = "/dev/spidev%s.%s" % (bus, channel)
@@ -68,7 +62,7 @@ class max31865:
         spi.openSPI(speed=100000, mode=1, device=device)
 
         self.config = REG_CONF_VBIAS_ON | REG_CONF_50HZ_FILTER | REG_CONF_CONVERSION_MODE_AUTO
-        if(_3wire):
+        if (_3wire):
             self.config |= REG_CONF_3WIRE_RTD
 
         self.__write__(REG_CONFIGURATION, self.config | REG_CONF_FAULT_STATUS_AUTO_CLEAR)
@@ -97,60 +91,54 @@ class max31865:
         rtdRaw = ((msb_rtd << 7) + ((lsb_rtd & 0xFE) >> 1))
         rtdT = (rtdRaw * rtdR) / float(32768)  # 15-bits
         temp = -rtd0 * a + sqrt(rtd0 ** 2 * a ** 2 - 4 * rtd0 * b * (rtd0 - rtdT))
-        temp = temp / (2 * rtd0 * b);
-        return temp;
+        temp = temp / (2 * rtd0 * b)
+        return temp
 
-#IP Address Command
+
+# IP Address Method
 
 def run_cmd(cmd):
-   p = Popen(cmd, shell=True, stdout=PIPE)
-   output = p.communicate()[0]
-   return output
+    p = Popen(cmd, shell=True, stdout=PIPE)
+    output = p.communicate()[0]
+    return output
 
-#while True:
-	
-#clear console
-#os.system('clear')
+"""Log Files"""
+log_txt = '/home/pi/py-max31865/profile.txt'
 
-#Humidity Program Algorithm
- 		
-humidity_voltage = float(adc.read_voltage(1)) #read voltage from microvane
+"""Routine"""
+
+# Humidity Program Algorithm
+
+humidity_voltage = float(adc.read_voltage(1))  # read voltage from microvane
 humidity = humidity_voltage / 5.00 * 100
-#print(humidity)
 
-#Temperature Program Algorithm
-		
-probe = max31865("myprobe", 0, 0, 0)
+# Temperature Program Algorithm
+
+probe = max31865("myprobe", 0, 0, False)
 temperature = probe.pull()
 spi.closeSPI()
 
-#Anemometer Pulse Counter Algorithm
+# Anemometer Pulse Counter Algorithm
 
-t_end = time.time() + 60*1
+t_end = time.time() + 60 * wind_time_period
 while time.time() < t_end:
-	count = wind_cb.tally()
+    count = wind_cb.tally()
 total = 0.293 * float(count) / 60
-    	
-#Timestamp Definition
+
+# Timestamp Definition
 current_time = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
 print(current_time)
 
 print("Temp: %.10f Humidity: %.10f Windspeed: %.10f" % (temperature, humidity, total))
-	
-#Get IP Address
+
+# Get IP Address
 ipaddr = run_cmd(cmd)
 print(ipaddr)
 
-#time.sleep(10)
-
-#Append Humidity Readings to profile.txt
-file = open("/home/pi/py-max31865/profile.txt" , "a")
+# Append Humidity Readings to profile.txt
+file = open(log_txt, "a")
 file.write("%s, %.10f, %.10f, %.10f, %s" % (current_time, temperature, humidity, total, ipaddr))
 file.close()
-	
-#old_count = count
-	
 
-
-#os.system("lifepo4wered-cli set wake_time 1")
-#os.system("sudo shutdown now")
+# os.system("lifepo4wered-cli set wake_time 1")
+# os.system("sudo shutdown now")

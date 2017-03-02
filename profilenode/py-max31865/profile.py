@@ -25,7 +25,7 @@ an.set_pull_up_down(WIND_GPIO, pigpio.PUD_UP)
 wind_cb = an.callback(WIND_GPIO, pigpio.FALLING_EDGE)
 
 #count = 0
-old_count = 0
+#old_count = 0
 
 """ADCPi Configuration"""
 i2c_helper = ABEHelpers()
@@ -107,46 +107,50 @@ def run_cmd(cmd):
    output = p.communicate()[0]
    return output
 
-while True:
+#while True:
 	
-	#clear console
-	#os.system('clear')
-	
-	#Humidity Program Algorithm
-	 		
-	humidity_voltage = float(adc.read_voltage(1)) #read voltage from microvane
-	humidity = humidity_voltage / 5.00 * 100
-	print(humidity)
+#clear console
+#os.system('clear')
 
-	#Temperature Program Algorithm
+#Humidity Program Algorithm
+ 		
+humidity_voltage = float(adc.read_voltage(1)) #read voltage from microvane
+humidity = humidity_voltage / 5.00 * 100
+#print(humidity)
+
+#Temperature Program Algorithm
 		
-	probe = max31865("myprobe", 0, 0, 0)
-    	temperature = probe.pull()
-    	spi.closeSPI()
+probe = max31865("myprobe", 0, 0, 0)
+temperature = probe.pull()
+spi.closeSPI()
 
-	#Anemometer Pulse Counter Algorithm
+#Anemometer Pulse Counter Algorithm
 
+t_end = time.time() + 60*1
+while time.time() < t_end:
 	count = wind_cb.tally()
-	total = 0.293 * float((count - old_count)) / 60
+total = 0.293 * float(count) / 60
     	
-	#Timestamp Definition
-	current_time = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
-	print(current_time)
+#Timestamp Definition
+current_time = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
+print(current_time)
 
-	print("Temp: %.10f Humidity: %.10f Windspeed: %.10f" % (temperature, humidity, total))
+print("Temp: %.10f Humidity: %.10f Windspeed: %.10f" % (temperature, humidity, total))
 	
-	#Get IP Address
-	ipaddr = run_cmd(cmd)
-	print(ipaddr)
+#Get IP Address
+ipaddr = run_cmd(cmd)
+print(ipaddr)
 
-	time.sleep(10)
+#time.sleep(10)
 
-	#Append Humidity Readings to profile.txt
-	file = open("/home/pi/py-max31865/profile.txt" , "a")
-	file.write("%s, %.10f, %.10f, %.10f, %s" % (current_time, temperature, humidity, total, ipaddr))
-	file.close()
+#Append Humidity Readings to profile.txt
+file = open("/home/pi/py-max31865/profile.txt" , "a")
+file.write("%s, %.10f, %.10f, %.10f, %s" % (current_time, temperature, humidity, total, ipaddr))
+file.close()
 	
-	old_count = count
+#old_count = count
 	
 
 
+#os.system("lifepo4wered-cli set wake_time 1")
+#os.system("sudo shutdown now")

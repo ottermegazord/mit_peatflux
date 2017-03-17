@@ -1,3 +1,10 @@
+
+# peatflux-code
+
+Welcome to the peatflux-code!
+
+# Running a script as a service in Raspbian Jessie #
+
 GE50A USB
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTZ1T3BU", SYMLINK+="ttyUSB-ge50a"
 LI7000 USB
@@ -5,11 +12,6 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{seria
 LI840
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTWD9PPQ", SYMLINK+="li840"
 
-# peatflux-code
-
-Welcome to the peatflux-code!
-
-# Running a script as a service in Raspbian Jessie #
 
 Step 1: Define the service definition to run your script (e.g. yourscript.py)
 `cd /lib/systemd/system`

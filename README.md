@@ -44,18 +44,6 @@ To stop the script we can enter the command
 
 # Persistent USB Device #
 
-GE50A USB
-
-`SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTZ1T3BU", SYMLINK+="ttyUSB-ge50a"`
-
-LI7000 USB
-
-`SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTYNX3XV", SYMLINK+="li7000"`
-
-LI840 USB
-
-`SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTWD9PPQ", SYMLINK+="li840"`
-
 If you have multiple USB devices connected, it could happen that after a reboot the device order is changed (ttyUSB0 is ttyUSB1, or the other way around)
 
 The good news is, that there is a solution for this:
@@ -74,17 +62,23 @@ and write down the:
 (you can press the spacebar to scroll down)
 
 = Examples =
-The RFXtrx433 is reported as:
+The FTDI cable used to connect to the Licor 7000 is reported as:
+  
+  idVendor           0x0403 Future Technology Devices International, Ltd
+  idProduct          0x6001 FT232 USB-Serial (UART) IC
+  bcdDevice            6.00
+  iManufacturer           1 FTDI
+  iProduct                2 UT232R
+  iSerial                 3 FTWD9PPQ
+
+The FTDI cable used to connect to the Licor 840 is reported as:
 
   idVendor           0x0403 Future Technology Devices International, Ltd
   idProduct          0x6001 FT232 USB-Serial (UART) IC
-  iProduct                2 RFXtrx433
-  iSerial                 3 07VYAR1X
-
-Aeon ZWave USB stick is reported as:
-
-  idVendor           0x10c4 Cygnal Integrated Products, Inc.
-  idProduct          0xea60 CP210x UART Bridge / myAVR mySmartUSB light
+  bcdDevice            6.00
+  iManufacturer           1 FTDI
+  iProduct                2 UT232R
+  iSerial                 3 FTYNX3XV
 
 You need the part behind the '0x'. So you don't write down '0x0403' but '0403'.
 
@@ -93,17 +87,32 @@ Create a rules file, with the following example content:
 
 sudo nano /etc/udev/rules.d/99-usb-serial.rules
 
-=== RFX-433 ===
+===Examples ===
 
-Put the following content in the file:
 
-<code>SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="123YAOOW", SYMLINK+="ttyUSB-RFX433-A"
+GE50A USB
 
-SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="123YX78C", SYMLINK+="ttyUSB-RFX433-B"</code>
+`SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTZ1T3BU", SYMLINK+="ttyUSB-ge50a"`
+
+LI7000 USB
+
+`SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTYNX3XV", SYMLINK+="li7000"`
+
+LI840 USB
+
+`SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTWD9PPQ", SYMLINK+="li840"`
+
 
 (Put in the values you've written down between the quotes (e.g. replace '0403' with the idVendor of your USB device).
 
-Some devices don't show a serial, you can remove that part in the file, so it looks like this:
+Some devices don't show a serial, for examples like this usb
+
+Aeon ZWave USB stick is reported as:
+
+  idVendor           0x10c4 Cygnal Integrated Products, Inc.
+  idProduct          0xea60 CP210x UART Bridge / myAVR mySmartUSB light
+  
+you can remove that part in the file, so it looks like this:
 
 <code>SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="ttyUSB-RFX433"</code>
 

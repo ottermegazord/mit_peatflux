@@ -40,7 +40,7 @@ This command will show the status (active/inactive) of your service, and the las
 Step 5: Restart your RPi and enjoy!
 
 To stop the script we can enter the command
-sudo service yourscript stop
+`sudo service yourscript stop`
 
 # Persistent USB Device #
 

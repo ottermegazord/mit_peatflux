@@ -5,14 +5,6 @@ Welcome to the peatflux-code!
 
 # Running a script as a service in Raspbian Jessie #
 
-GE50A USB
-SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTZ1T3BU", SYMLINK+="ttyUSB-ge50a"
-LI7000 USB
-SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTYNX3XV", SYMLINK+="li7000"
-LI840
-SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTWD9PPQ", SYMLINK+="li840"
-
-
 Step 1: Define the service definition to run your script (e.g. yourscript.py)
 `cd /lib/systemd/system`
 `sudo nano yourscript.service`
@@ -48,6 +40,13 @@ This command will show the status (active/inactive) of your service, and the las
 Step 5: Restart your RPi and enjoy!
 
 # Persistent USB Device #
+
+GE50A USB
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTZ1T3BU", SYMLINK+="ttyUSB-ge50a"
+LI7000 USB
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTYNX3XV", SYMLINK+="li7000"
+LI840
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTWD9PPQ", SYMLINK+="li840"
 
 If you have multiple USB devices connected, it could happen that after a reboot the device order is changed (ttyUSB0 is ttyUSB1, or the other way around)
 

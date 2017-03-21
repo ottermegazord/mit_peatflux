@@ -1,3 +1,5 @@
+"""this program transfers the file based on the frequency set in either crontab or daemon"""
+
 import datetime
 import os
 import shutil

@@ -56,12 +56,14 @@ while 1:
 
     dt = datetime.datetime.now()
     try:
-        if (dt.hour == 7 and dt.minute == 57):
+        if (dt.hour == 8 and dt.minute == 17):
 	    threeway.open(2)	
             test.li7000_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval,
                                     h2o_span, co2_ref, co2_span)
-	    threeway.close(2)
+	    
         else:
+	    threeway.close(2)
+	    threeway.close(1)
             poll = test.li7000_pollnow()
 	    print(poll)
             test.li7000_writelog(poll)

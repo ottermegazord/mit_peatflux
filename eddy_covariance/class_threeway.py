@@ -11,9 +11,9 @@ class Threeway:
 	GPIO.setup(THREE_WAY, GPIO.OUT)
 
     def open(self, channel):
-	GPIO.output(self.THREE_WAY[channel-1], GPIO.HIGH)	
+	GPIO.output(self.THREE_WAY[channel-1], GPIO.LOW)	
        
     def close(self, channel):
-	GPIO.output(self.THREE_WAY[channel-1], GPIO.LOW)
+	GPIO.output(self.THREE_WAY[channel-1], GPIO.HIGH)
 
 

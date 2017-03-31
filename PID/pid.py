@@ -140,10 +140,11 @@ def getadcreading(address, adcConfig):
 		t = ~(0x020000 - t)
 	return t * varMultiplier
 
+dac = MCP4725()
 #dac.set_voltage(4096,True)
 time.sleep(1)
-p=PID(6,0.373970,0.009349289)
-p.setPoint(1.135)
+p=PID(120,1.0102,0.247475) # 165, 1.0102, 0.247475
+p.setPoint(1.6026) #1.6026
 
 
 while True:
@@ -153,5 +154,10 @@ while True:
     print("Input to PID: %.5f" % measurement_value)
     pid = p.update(measurement_value) #because pump is sucking air in
     print("Output from PID: %.5f" % pid)
-    address = int(round(pid/5.030581 * 4095)) * -1
+    address = int(round(pid/5.058137 * 4095)) * -1
+    if (address > 4095):
+	address = 4095
+    elif (address < 0):
+	address = 0
+    print("Address: %d" % address)
     dac.set_voltage(address, True)

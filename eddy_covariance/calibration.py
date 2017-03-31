@@ -14,9 +14,9 @@ EC_channels = [9, 10, 11, 12]  # First element is zeroing Channel
 valve = Valve(SWITCH_OPEN, SWITCH_CLOSE, open_chan_list, close_chan_list)
 
 while 1:
-	for i in range (9, 13):
+	for i in range (1, 17):
 		print(i)
 		valve.open_valve_channel(i, 0.01)
-		time.sleep(3)
+		time.sleep(1)
 		valve.close_valve_channel(i,0.01)
-		time.sleep(5)
+		time.sleep(1)

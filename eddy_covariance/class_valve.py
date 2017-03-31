@@ -50,3 +50,4 @@ class Valve:
         GPIO.output(self.SWITCH_CLOSE, GPIO.LOW)
         time.sleep(interval)
         GPIO.output(self.SWITCH_CLOSE, GPIO.HIGH)
+

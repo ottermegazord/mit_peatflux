@@ -22,6 +22,7 @@ co2_ref = 0
 co2_span = [350, 0, 430]
 h2o_span = [0 ,0, 0]
 
+
 """Log Files"""
 log_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/li7000_log.txt'
 cal_txt = '/home/pi/Desktop/peatflux-code/eddy_covariance/li7000_calibration.txt'
@@ -35,6 +36,7 @@ close_chan_list = [32, 36, 38, 40]
 SWITCH_OPEN = 29
 SWITCH_CLOSE = 22
 SWITCH_INTERVAL = 0.5
+
 EC_channels = [9, 10, 11, 12]  # First element is zeroing Channel
 THREE_WAY = [13, 15]
 EDDY_CAL_CHAN = 15
@@ -58,19 +60,18 @@ while 1:
 
     dt = datetime.datetime.now()
     try:
-        if (dt.hour == 10 and dt.minute == 9):
-	    threeway.open(1)
-	    valve.open_valve_channel(EDDY_CAL_CHAN, 0.25)	
-            test.li7000_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval,
-                                    h2o_span, co2_ref, co2_span)
-	    valve.close_valve_channel(EDDY_CAL_CHAN, 0.25)
-	    threeway.close(1)
-        else:
-	    threeway.close(1)
-	    threeway.close(2)
-            poll = test.li7000_pollnow()
-	    print(poll)
-            test.li7000_writelog(poll)
+      if (dt.hour == 10 and dt.minute == 9):
+	      threeway.open(1)
+	      valve.open_valve_channel(EDDY_CAL_CHAN, 0.25)
+        test.li7000_calibration(EC_channels, h2o_zero_interval, h2o_span_interval, co2_zero_interval, co2_span_interval, h2o_span, co2_ref, co2_span)
+	      valve.close_valve_channel(EDDY_CAL_CHAN, 0.25)
+	      threeway.close(1)
+      else:
+	      threeway.close(1)
+	      threeway.close(2)
+        poll = test.li7000_pollnow()
+	      print(poll)
+        test.li7000_writelog(poll)
 
     except:
         continue

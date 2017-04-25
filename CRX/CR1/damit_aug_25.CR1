@@ -1,0 +1,85 @@
+'CR800 Series Datalogger
+'To create a different opening program template, type in new
+'instructions and select Template | Save as Default Template
+'date:
+'program author:
+'
+'HMP155
+'
+'12V - Blue
+'VX2 -> Long cable PRT
+'2H -> H
+'2L -> L -> Yellow
+'G -> G -> Black
+'1H -> Brown
+'3H -> White
+'G -> Pink Red Green
+'3L -> Grey
+''
+'BF3
+'4H -> Grey
+'G -> Green Clear Purple
+'4L -> White
+'
+'Rain Gauge
+'G-> Black
+'P1 -> Grey
+'
+SequentialMode
+
+Const T_DIFF_CH = 2 'Differential input for HMP155 PRT measurement
+
+'Declare Public Variables
+'Example:
+Public PTemp, batt_volt
+Public rain_tips
+Public rel_hum, Rs_Ro, T 'Relative humidity and temperature (HMP 155)
+Public tot_rad, dif_rad
+Units rel_hum = mV
+Units T = C
+Units tot_rad = mV
+Units dif_rad = mV
+
+'Declare Other Variables
+'Example:
+'Dim Counter
+
+'Declare Constants
+'Example:
+'CONST PI = 3.141592654	
+
+'Define Data Tables
+DataTable (Data,1,-1)
+	DataInterval (0,10,min,10)
+	Minimum (1,batt_volt,FP2,0,False)
+	Sample (1,PTemp,FP2)
+	Totalize (1,rain_tips,UINT2,False)
+	Average (1,T,IEEE4,False)
+	Average (1,rel_hum,IEEE4,False)
+	Average (1,tot_rad,FP2,False)
+	Average (1,dif_rad,FP2,False)
+EndTable
+
+'Define Subroutines
+'Sub
+	'EnterSub instructions here
+'EndSub
+
+'Main Program
+BeginProg
+	Scan (30,sec,0,0)
+		PanelTemp (PTemp,250)
+		Battery (Batt_volt)
+		PulseCount (rain_tips,1,11,2,0,1.0,0)
+		VoltSe (rel_hum,1,mV5000,2,1,0,_50Hz,1.0,0)
+  	BrHalf4W (Rs_Ro,1,mV25,mV25,T_DIFF_CH,Vx2,1,2035,True ,True ,0,250,1.0,0)
+		PRT (T,1,Rs_Ro,1.0,0)
+    VoltSe(tot_rad,1,mV2500,7,1,0,_50Hz,1.0,0)
+    VoltSe(dif_rad,1,mv2500,8,1,0,_50Hz,1.0,0)
+		'Enter other measurement instructions
+		'Call Output Tables
+		'Example:
+		CallTable Data
+	NextScan
+EndProg
+

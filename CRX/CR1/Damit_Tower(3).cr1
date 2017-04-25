@@ -1,0 +1,315 @@
+V4.2 Card out
+'v4 Based on v3, This add 4 more Moisture and Temperature sensor at multiplexer (By Ming Hui, 25 April 2012) 
+'v3: Change the heating time of heatflux plate from every three hours to every six hours, and last for three minutes.
+'v2: Based on 'singtel_300810_Alex.CR1. This add more sensors (soil heat flux plate, temperature probe, and moisture probe')
+'   to the AM16/32B multiplexer. (by Kai, May 18,2011) 
+
+'Data Logger: CR1000
+
+
+'PipeLineMode  I don't think PipeLineMode is an option for us because we need conditional execution
+
+'*** Constants ***
+Const SCAN_INTERVAL_EC = 100			  '100 mSec=10Hz, eddy covariance
+Const SCAN_INTERVAL_NON_EC = 1     'measurement interval in seconds for other instruments
+Const OUTPUT_INTERVAL_NON_EC = 1    'output interval in minutes for other instruments
+Const CSAT3_AZIMUTH = 0			'Unique value.
+Const SDM_PER = 30				'Default SDM clock speed.
+
+'** Port assignments **
+Const REL_HUM_SE_CH = 1 'number of SE channel on CR1000
+Const WIND_SE_CH = 2    'number of SE channel on CR1000
+Const T_DIFF_CH = 2     'number of Diff channel on CR1000
+Const TOT_RAD_SE_CH = 7 'number of SE channel on CR1000
+Const DIF_RAD_SE_CH = 8 'number of SE channel on CR1000
+Const MUX_DIFF_CH = 5   'number of Diff channel on CR1000
+Const CNR1_T_DIFF_CH = 6'number of Diff channel on CR1000
+Const RAIN_PULSE_CH = 1 'number of Pulse channel on CR1000
+Const WIND_PULSE_CH = 2 'number of Pulse channel on CR1000
+Const MUX_RST = 4       'number of Control port on CR1000
+Const MUX_CLK = 5       'number of Control port on CR1000
+Const PA_uS_CH = 15     'number of SE channel on CR1000
+Const PA_uS_PO = 7      'number of Control port on CR1000
+Const MUX_SE_CH_1 = 9   'number of SE Channel on CR1000 Com Port Low(Multiplexer To CR1000)
+Const MUX_SE_CH_2= 10   'number of SE Channel on CR1000 Com Port Low(Multiplexer to CR1000)
+Const MUX_CON_PO = 6    'number of Control Port Channel on CR1000 (CS616)
+Const MUX_EXCITE = 2    'number of Excite Channel for CS107 On CR1000
+
+Const CSAT_OPT = INT (1000/SCAN_INTERVAL_EC)			'Compute CSAT3 Execution Parameter (10 or 20 Hz).
+                                                                                'CSAT3 variables with additional one or four scan delay.
+Public wind(5)					                                        'Wind, temperature, and diagnostic data from CSAT3.
+Alias wind(1) = Ux
+Alias wind(2) = Uy
+Alias wind(3) = Uz
+Alias wind(4) = C
+Alias wind(5) = diag_csat
+Units wind = m/s
+Units C = m/s
+Units diag_csat = unitless
+
+Public diag_bits(9)				'Warning flags.
+Alias diag_bits(1) = del_T_f		'Delta temperature warning flag.
+Alias diag_bits(2) = track_f		'Tracking (signal lock) warning flag.
+Alias diag_bits(3) = amp_h_f		'Amplitude warning high flag.
+Alias diag_bits(4) = amp_l_f		'Amplitude low warning flag.
+Alias diag_bits(5) = chopper_f	'Chopper warning flag.
+Alias diag_bits(6) = detector_f	'Detector warning flag.
+Alias diag_bits(7) = pll_f		'PLL warning flag.
+Alias diag_bits(8) = sync_f		'Synchronization warning flag.
+Alias diag_bits(9) = agc			'Automatic gain control.
+Units diag_bits = unitless
+
+Dim diag_csat_work As Long
+
+'Diagnostic variables.
+Dim disable_flag_on(4) As Boolean	'Intermediate processing disable flags.
+'disable_flag_on(1)				'TRUE when CSAT3 diagnostic warning flags are on or CSAT3 has no data.
+'disable_flag_on(2)				'TRUE when LI-7500 diagnostic warning flags are on or LI-7500 failed to send data.
+'disable_flag_on(3)				'TRUE when CSAT3 diagnostic warning flags are on.
+'                  				  Used to filter the sum of CSAT3 diagnostic warning flags.
+'disable_flag_on(4)				'TRUE when LI-7500 diagnostic warning flags are on.
+'                  				  Used to filter the sum of LI-7500 diagnostic warning flags.
+Dim n					'Number of samples in the online stats.
+Units n = samples
+
+Dim cov_disable_flag As Boolean	'TRUE when CSAT3 or LI-7500 reports bad 
+
+
+'*** Variables ***
+Public rain 'rain gauge (TR-525S)
+Units rain = tips
+
+Public rel_hum, Rs_Ro, T 'Relative Humidity and Temperature (HMP 155) 
+Units rel_hum = mV
+Units T = C
+
+Public wind_speed, wind_dir 'Wind speed and direction (Gill 12005D)
+Units wind_speed = pulses
+Units wind_dir = ratio
+
+Public cnr1_temp ' temperature (CNR1)
+Units cnr1_temp = C
+
+Public cnr1(4) 'pyranometer and pygeometer (CNR1)
+Alias cnr1(1) = cm3_up
+Alias cnr1(2) = cg3_up
+Alias cnr1(3) = cm3_down
+Alias cnr1(4) = cg3_down
+Units cm3_up = mV
+Units cg3_up = mV
+Units cm3_down = mV
+Units cg3_down = mV
+
+Public par(2) 'PAR sensor (LI-190)
+Alias par(1) = par_up
+Alias par(2) = par_down
+
+Public tot_rad, dif_rad 'Sunshine meter (BF3)
+Units tot_rad = mV
+Units dif_rad = mV
+
+Public batt_volt, panel_temp 'battery volt; panel temperature of CR1000
+Units batt_volt = V
+Units panel_temp = C
+
+Public soil_temp             'temperature of soil thermocouple proble (TCAV)
+Units soil_temp = C
+
+Public PA_uS, VWater          'period; water content fraction of TDR CS616
+Units PA_uS=uSec
+Units VWater=fraction
+Public VW(4)
+Public PA_uS_B(4)
+Units PA_uS_B=uSec
+Units VW = fraction
+
+Public T107_C(4)
+Units T107_C=Deg C
+
+
+
+Dim LCount_5
+
+Public VHeat(4) 'Soil heatflux plate (Hukseflux)
+Alias VHeat(1)=VHeat_cur 'dif voltage across the current sensing resistor of heatflux plate
+Alias VHeat(2)=VHeat_sen 'dif voltage of soil heatflux plate sensor
+Alias VHeat(3)=VHeat_cur2 'dif voltage across the current sensing resistor of heatflux plate
+Alias VHeat(4)=VHeat_sen2 'dif voltage of soil heatflux plate sensor
+Units VHeat_cur=mV
+Units VHeat_sen=mV
+Units VHeat_cur2=mV
+Units VHeat_sen2=mV
+
+' Working variables
+Dim I
+Dim P
+
+'*** Output Data Tables ***
+DataTable(non_ec_output_v3,TRUE,-1)
+  DataInterval(0,OUTPUT_INTERVAL_NON_EC,Min,-1) 'last var is max number of time stamps to add for lapses
+  CardOut (0,-1)
+  Average(1,panel_temp,FP2,FALSE) 'FALSE here means do not disable
+  Minimum(1,batt_volt,FP2,FALSE,FALSE)
+  Average(1,rel_hum,FP2,FALSE)
+  Average(1,T,FP2,FALSE)
+'  Totalize(1,rain,FP2,FALSE)
+  Average(1,wind_speed,FP2,FALSE) ' !!! Check me --- not sure if averaging is the right approach ( Reading In Pulse)
+  Sample(1,wind_dir,FP2) ' remember, don't average a periodic variable
+  Average(1,tot_rad,FP2,False)
+  Average(1,dif_rad,FP2,False)
+  Average(1,cm3_up,FP2,False)
+  Average(1,cg3_up,FP2,False)
+  Average(1,cm3_down,FP2,False)
+  Average(1,cg3_down,FP2,False)
+ ' Average(1,par_up,FP2,False)
+  'Average(1,par_down,FP2,False)
+  Average(1,cnr1_temp,FP2,False)
+  'Average(1,soil_temp,FP2,False)
+  'Sample(1,PA_uS,FP2) 'period
+  'Average(1,VWater,FP2,False)
+  'Average(1,VHeat_cur,FP2,False)
+  'Average(1,VHeat_sen,FP2,False)
+  'Average(1,VHeat_cur2,FP2,False)
+  'Average(1,VHeat_sen2,FP2,False)
+  EndTable
+  
+DataTable(Soil,TRUE,-1)
+  DataInterval(0,OUTPUT_INTERVAL_NON_EC,Min,-1) 'last var is max number of time stamps to add for lapses
+  CardOut (0,-1)
+  Sample(1,PA_uS_B(1),FP2)
+  Sample(1,VW(1),FP2)
+  Sample(1,PA_uS_B(2),FP2)
+  Sample(1,VW(2),FP2)
+  Sample(1,PA_uS_B(3),FP2)
+  Sample(1,VW(3),FP2)
+  Sample(1,PA_uS_B(4),FP2)
+  Sample(1,VW(4),FP2)
+  Sample(1,T107_C(1),FP2)
+  Sample(1,T107_C(2),FP2) 
+  Sample(1,T107_C(3),FP2)
+  Sample(1,T107_C(4),FP2)
+  EndTable
+
+'Csat Raw Data
+DataTable (csat,TRUE,-1)
+  DataInterval(0,100,mSec,-1) 'last var is max number of time stamps to add for lapses
+  CardOut (0,-1)
+  Sample (1,Ux,IEEE4)
+  Sample (1,Uy,IEEE4)
+  Sample (1,Uz,IEEE4)
+  Sample (1,C,IEEE4)
+  Sample (1,diag_csat,IEEE4)
+EndTable
+
+BeginProg
+  Move (Ux,5,NaN,1)
+  SDMSpeed (SDM_PER)  
+	Scan(SCAN_INTERVAL_EC,mSec,3,0)
+	  CSAT3 (Ux,1,3,90,CSAT_OPT)
+	  'Define 61502 as NaN.
+			If ( diag_csat = NaN ) Then ( diag_csat = 61502 )
+			'Break up the four CSAT3 warning flags into four separate bits.
+			diag_csat_work= diag_csat
+			del_T_f = diag_csat_work AND &h8000
+			track_f= diag_csat_work AND &h4000
+			amp_h_f = diag_csat_work AND &h2000
+			amp_l_f = diag_csat_work AND &h1000
+			'Turn on the intermediate processing disable flag when any CSAT3 warning flag is
+			' high, including the special cases NaN (61502), a Lost Trigger (61440), No Data
+			' (61503), an SDM error (61441), or wrong CSAT3 embedded code (61442).
+			disable_flag_on(1) = diag_csat_work AND &hf000
+			'Turn on only when CSAT3 diagnostic warning flags are set.
+			disable_flag_on(3) = ( disable_flag_on(1) AND NOT (C = NaN) )
+			'Save the four most significant bits of the CSAT3 diagnostics, except for the
+			' special cases NaN (61502), a Lost Trigger (61440), No Data (61503), an SDM
+			' error (61441), or wrong CSAT3 embedded code (61442).
+			If ( diag_csat_work < &hf000 ) Then ( diag_csat = INT (diag_csat_work/&h1000) )
+    CallTable (csat)
+	 	If IfTime(0,SCAN_INTERVAL_NON_EC,Sec) Then
+	 	  PanelTemp(panel_temp,250)
+	 	  Battery(batt_volt)
+	 	  VoltSe(rel_hum,1,mV5000,REL_HUM_SE_CH,True,0,_50Hz,1,0)
+	 	  BrHalf4W(Rs_Ro,1,mV25,mV25,T_DIFF_CH,Vx2,1,2035,True,True,0,250,1.0,0)
+	 	  PRT(T,1,Rs_Ro,1.0,0)
+	 	  PulseCount(rain,1,RAIN_PULSE_CH,2,0,1,0)
+	 	  PulseCount(wind_speed,1,WIND_PULSE_CH,0,0,1.0,0)
+	 	  BrHalf(wind_dir,1,mV2500C,WIND_SE_CH,Vx1,1,2500,True,0,_50Hz,1.0,0)
+	 	  VoltSe(tot_rad,1,mV2500,TOT_RAD_SE_CH,1,0,_50Hz,1.0,0)
+	 	  VoltSe(dif_rad,1,mV2500,DIF_RAD_SE_CH,1,0,_50Hz,1.0,0)
+	 	  ' !!! right now we have yellow in L, green in ground on 4WPB100 in diff ch 6, red and blue in h and L of diff ch 7; but not sure if this is right
+            '!!! I think it should be okay to reuse Rs_Ro as a working variable, but might be worth checking
+            BrHalf4W(Rs_Ro,1,mV25,mV25,CNR1_T_DIFF_CH,Vx3,1,2035,True,True,0,250,1.0,0)
+            PRT(cnr1_temp,1,Rs_Ro,1.0,0)
+            CS616(PA_uS,1,PA_uS_CH,PA_uS_PO,1,1,0) 'CS616 Water Content Reflectometer data
+            VWater=-0.0663+(-0.0063*PA_uS)+(0.0007*PA_uS^2) 'calibrated fraction of water content 
+            If IfTime (0,6,hr) Then  'repetitive loop (interval) for 6 hrs,(ie. 00,06,12,18,00)
+		  'If IfTime (0,3,hr) Then  'repetitive loop (interval) for 3 hrs,(ie. 00,03,06,09,12,15,18,21,24)
+		  'If IfTime (0,20,sec) Then  'repetitive loop (interval) for 20 sec (for testing)
+		    SW12 (1) 'Turn on 12V switch
+		  EndIf
+		  If IfTime (3,360,min) Then  'let it run for 3 min (ie 180 sec)
+		  'If IfTime (6,180,min) Then  'let it run for 6 min (ie 360 sec)
+		  'If IfTime (10,20,sec) Then  'let it run for 10 sec (for testing)
+		    SW12 (0) 'Turn off 12V switch
+		  EndIf		
+      ' Multiplexer readings
+      PortSet(MUX_RST,1)
+      I = 1
+      SubScan(0,mSec,4)
+        PulsePort(MUX_CLK,10000)
+        VoltDiff(cnr1(I),1,mV250,MUX_DIFF_CH,True,0,_50Hz,1.0,0)
+        I = I + 1
+      NextSubScan
+		  I=1
+		  SubScan(0,mSec,4)
+		    PulsePort(MUX_CLK,10000)
+		    VoltDiff (VHeat(I),1,mV2500,MUX_Diff_CH,True ,0,_50Hz,1.0,0)
+		    I=I+1
+	    NextSubScan
+        PortSet(MUX_RST,1)
+		    'Switch to next AM16/32 Multiplexer channel
+		    SubScan(0,mSec,1)
+		    PulsePort(MUX_CLK,10000)
+		    'Type E (chromel-constantan) Thermocouple measurements Temp_C on the AM16/32 Multiplexer:
+		    TCDiff(soil_temp,1,mV2_5C,MUX_Diff_CH,TypeE,panel_temp,True,0,_60Hz,1,0)
+      NextSubScan
+        I = 1
+        SubScan(0,mSec,2)
+        PulsePort(MUX_CLK,10000)
+        VoltDiff(par(I),1,mV25,MUX_DIFF_CH,True,0,_50Hz,1.0,0)
+        I = I + 1  
+        NextSubScan
+        I = 1
+        P = 2
+        SubScan(0,mSec,2) 
+        PulsePort(MUX_CLK,10000)  
+		    CS616(PA_uS_B(I),1,MUX_SE_CH_1,MUX_CON_PO,1,1,0)
+		    Delay(0,20,mSec)
+		    CS616(PA_uS_B(P),1,MUX_SE_CH_2,MUX_CON_PO,1,1,0) 		   
+		    I = I + 2
+		    P = P + 2
+		  NextSubScan
+		    I = 1 
+		    P = 2
+		    SubScan(0,mSec,2) 
+        PulsePort(MUX_CLK,10000)  
+		    Therm107(T107_C(I),1,MUX_SE_CH_1,WIND_PULSE_CH,0,_60Hz,1,0)
+		    Delay(0,20,mSec)
+		    Therm107(T107_C(P),1,MUX_SE_CH_2,WIND_PULSE_CH,0,_60Hz,1,0)	   
+		    I = I + 2
+		    P = P + 2
+		  NextSubScan
+		    For LCount_5=1 To 4
+		    VW(LCount_5)=-0.0663+(-0.0063*PA_uS_B(LCount_5))+(0.0007*PA_uS_B(LCount_5)^2)
+		    Next
+      PortSet(MUX_RST,0)
+      CallTable(non_ec_output_v3)
+      'CallTable(Soil)
+	 	EndIf 
+  NextScan
+EndProg
+
+
+
+
+ 

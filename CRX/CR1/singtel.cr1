@@ -1,0 +1,113 @@
+'Last updated: 24 August 2010 by Alex Cobb
+'Data Logger: CR1000
+'Instruments: CSAT-3, HMP-155, TR-525S
+
+'I don't think PipeLineMode is an option for us because we need conditional execution
+'PipeLineMode
+
+'*** Constants ***
+'Measurement Rate
+Const SCAN_INTERVAL_csat = 100			  '100 mSec=10Hz, CSAT3
+Const SCAN_INTERVAL_1min = 1        '1 Min, HMP-155, TR-525S
+
+'Output period
+Const OUTPUT_INTERVAL_csat = 100			   'CSAT3 Online flux data output interval in mSec
+Const OUTPUT_INTERVAL_1min = 30      '1min scan interval instruments (HMP-155, TR-525S) data output interval in Min
+
+Const CSAT3_AZIMUTH = 0				   'Orientation of CSAT3
+Const CSAT_OPT = INT (1000/SCAN_INTERVAL_csat) 	'Compute CSAT3 Execution Parameter
+Const SDM_PER_csat = 30 				'Default SDM clock speed, CSAT3
+
+
+'*** Variables ***
+Public wind(5)
+Alias wind(1) = Ux
+Alias wind(2) = Uy
+Alias wind(3) = Uz
+Alias wind(4) = Ts
+Alias wind(5) = diag_csat
+
+Units Ux = m/s
+Units Uy = m/s
+Units Uz = m/s
+Units Ts = C
+Units diag_csat = unitless
+
+'Warning flags
+Public diag_bits(4) As Boolean
+Alias diag_bits(1) = del_T_f      'Delta temperature warning flag
+Alias diag_bits(2) = sig_lck_f    'Poor signal lock warning flag
+Alias diag_bits(3) = amp_h_f      'Amplitude high warning flag
+Alias diag_bits(4) = amp_l_f      'Amplitude low warning flag
+
+Units diag_bits = samples
+
+Public Rain_tr525s
+Units Rain_tr525s=mm
+
+Public hmp155
+Units hmp155 = mV
+
+Public batt_volt 
+Public panel_temp
+Units batt_volt = V
+Units panel_temp = C
+
+'Number of samples in the online stats
+Dim n 
+Units n = samples
+
+'Working variables
+Dim diag_csat_work As Long
+
+'*** Final Output Data Tables ***
+'Raw Data Table: 10hz scan frequency, 10hz data interval
+
+DataTable(raw_data_Sing_10hz,TRUE,-1) '-1 here means allow table to grow to fill memory
+  DataInterval(0,OUTPUT_INTERVAL_csat,mSec,-1) 'last arg is max number of time stamps to add for lapses
+  
+	Sample(1,Ux,IEEE4)
+	Sample(1,Uy,IEEE4)
+	Sample(1,Uz,IEEE4)
+	Sample(1,Ts,IEEE4)
+	Sample(1,diag_csat,IEEE4)
+EndTable
+
+'Raw Data Table: 1min scan frequency, 30min data interval
+DataTable(raw_data_Sing_1min,TRUE,-1)
+  DataInterval(0,OUTPUT_INTERVAL_1min,min,-1) 'last var is max number of time stamps to add for lapses
+
+  Average(1,panel_temp,FP2,FALSE) 'FALSE here mmeans do not disable
+  Minimum(1,batt_volt,FP2,FALSE,FALSE)
+  Average(1,hmp155,FP2,FALSE)
+  Totalize(1,Rain_tr525s,Long,FALSE)
+EndTable
+
+BeginProg
+	Move(Ux,5,NaN,1)   			'Set all CSAT3 variables to NaN.	
+	SDMSpeed(SDM_PER_csat)  			'Set the SDM clock speed.
+
+	Scan(SCAN_INTERVAL_csat,mSec,3,0)
+		CSAT3(Ux,1,3,91,CSAT_OPT)   	'Get CSAT3 wind and sonic temperature data.
+    If (diag_csat=NaN) Then (diag_csat=61502)    'Define 61502 as NaN
+    diag_csat_work = diag_csat              'Break up CSAT3 warning flags into four separate bits
+    del_T_f = diag_csat_work AND &h8000
+    sig_lck_f = diag_csat_work AND &h4000
+    amp_h_f = diag_csat_work AND &h2000
+    amp_l_f = diag_csat_work AND &h1000
+    'Save four most significant bits of CSAT3 diagnostics
+    'except for special cases NaN (61502), Lost trigger (61440), No Data (61503),
+    'SDM error (61441), or wrong CSAT3 embedded code (61442)
+    If (diag_csat_work<&hf000) Then (diag_csat = INT (diag_csat_work/&h1000))  
+		CallTable(raw_data_Sing_10hz)
+	
+	 	If IfTime(0,30,Min) Then 
+      PanelTemp(panel_temp,250)
+		  Battery(batt_volt)
+	    VoltSe(hmp155,1,mV2500,1,True,0,_50Hz,1,0)
+      PulseCount(Rain_tr525s,1,1,2,0,1,0)
+      CallTable(raw_data_Sing_1min)	 	  
+	 	EndIf 
+
+  NextScan
+EndProg

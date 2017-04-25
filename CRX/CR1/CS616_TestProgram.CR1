@@ -1,0 +1,43 @@
+'Test Program written by Jan Ng, 28 Sept. 2009
+'Modified from "Cr1000 Program Example 1" in CS616 Operator's Manual, pg.23
+
+'*** Declaring Public/Dim Variables ***
+Public batt_volt
+Public Panel_temp
+Public Period (1)
+Public Flag (1)
+Dim I
+
+'*** Declaring Constants***
+
+'Default calibration constants
+const a0= -0.0663
+const a1= -0.0063
+const a2= 0.0007
+
+'Flag logic constants
+const high = true
+const low = false
+
+'*** Defining Data Tables ***
+DataTable (Dat1Sec, 1, -1)
+	DataInterval (0, 1, sec, 0)
+	Minimum (1, batt_volt, IEEE4, 0, False)
+	Average (1, Panel_temp, IEEE4, 0)
+	Sample (1, Period(1), FP2)
+EndTable
+
+'*** Main Program ***
+BeginProg
+	Scan (1, Sec, 0, 0)
+		Battery (Batt_volt)
+		PanelTemp (Panel_temp, 250)
+		If IfTime (0,2,sec) Then flag(1)=high
+		If Flag(1)=high Then
+		'*** measure CS616 probes on CR1000 ***
+		CS616 (Period(1), 1, 1, 1, 1, 1.0, 0)
+		EndIf
+		'*** call output tables *** 
+		CallTable Dat1Sec
+	NextScan
+EndProg

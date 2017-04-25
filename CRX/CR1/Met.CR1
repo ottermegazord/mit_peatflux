@@ -1,0 +1,358 @@
+'CR1000 Series Datalogger
+
+'***********************
+'***********************
+'-What type of timestamps, if any, do you want in the data files? Make sure they are as we want.
+'-Why are several wire colors different in the manuals and the SingTel diagrams? Which ones should I use?
+'-The Wiring_Diagram_Table_SingtelSite_Oct2012-Mar2013.docx file does not always seem correct - e.g. microvane red wire 
+'Is ID'ed both as G and Excitation and vice versa for green wire. We will have to make sure the wiring if ok before plugging anything.
+'-CNR1 heater - do you want to power it all the time, only at night, or not at all? Is condensation a common problem at the site?
+'-CNR1 PT-100: SingTel wiring seems wrong; I used the same wiring as in my previous job. Will need to check/test in Singapore.
+'-BF3 sun state: do you want to measure it? (it does not seem to be measured at SingTel) If so, use logic (i.e. intensity) or 
+'opened/closed (i.e. sun/no sun)? On the other hand, I've never been able to make this work in Quebec and we never found out if 
+'the sensor, wiring or program was the problem.
+'-BF3: do we have the integrated heater? (If so, we should power it using a power strip, not the datalogger): yes, we have a heater
+'-BF3: it is powered with 5V at SingTel but we used 12V in Quebec. It probably depends if we have a heater or not.
+'-We will have to update the calibration factor for the CNR1 depending on the specific sensor we use.
+'-Make sure we convert wind direction the right way.
+'-Make sure we use the right conversion coefficient for the barometer (i.e. does it give plausible numbers?)
+'***********************
+'***********************
+
+'Program for CR1000 datalogger with radiation and meteorological sensors
+'Includes 1 12005D microvane and cup anemometer, 1 CNR1, 1 BF3, 2 LI-190, 1 TR-525s rain gauge, 1 PTB110 barometer
+'
+'Last modified July 15, 2013 by Marc Giasson
+
+'Wiring:
+'
+'***** 
+'ALL HIGH/LOW PORT ARE WIRED ON THE MULTIPLEXER UNLESS OTHERWISE INDICATED
+'WIRES TO GROUNDS AND SIGNAL GROUNDS SHOULD BE WIRED TO THE PORT CLOSEST TO THE MEASUREMENT PORTS (H, L) USED
+' *****
+'
+'AM16/32B multiplexer (IN 2X32 MODE)
+'COM ODD H: H1 - on CR1000
+'COM ODD L: L1 - on CR1000
+'COM GROUND: Signal ground
+'RES: C1
+'CLK: C2
+'GND: G
+'12V: 12V
+'Shield: Signal ground
+'Ground lug: earth ground via 8AWG wire
+'
+'12005D microvane and cup anemometer
+'*****WIRES DON'T MATCH THE MANUAL - SOMETHING IS FUCKED UP*****
+'Microvane
+'Green: VX1 (excitation)
+'Brown: H4 (wind direction signal) - on CR1000
+'Red: signal ground (signal reference)
+'Black: signal ground
+'
+'Cup anemometer
+'Red: 12V (power)
+'White: P1 (wind speed)
+'Green: signal ground
+'Black: G (power ground)
+'Clear: signal ground
+'
+'PTB110 atmospheric pressure transducer (barometer)
+'Pin 2 (green): Signal ground - on CR1000
+'Pin 3 (black): G
+'Pin 4 (red): 12V (power)
+'Pin 5 (white): L4 - on CR1000
+'
+'CNR1-PT-100 *****THIS IS NOT SINGTEL'S WIRING, WHICH SEEMED WRONG*****
+'4WPB100 H: H2 on CR1000 
+'4WPB100 L: L2 on CR1000
+'4WPB100 G: G on CR1000
+'4WPB100 black wire: VX2
+'Red: 4WPB100 L (Pt-100 Excitation +)
+'Blue: 4WPB100 G (Pt-100 Excitation -)
+'Yellow: H3 - on CR1000 (Pt-100 Signal +)
+'Green: L3 - on CR1000 (Pt-100 Signal -)
+'
+'CNR1
+'Red: H1 (CM3 downwelling solar radiation signal)
+'Blue: L1 (CM3 downwelling solar radiation reference)
+'Jumper: L1 to signal ground
+'White: H2 (CM3 upwelling solar radiation signal)
+'Black: L2 (CM3 upwelling solar radiation reference)
+'Jumper: L2 to signal ground
+'Grey: H3 (CG3 downwelling infrared signal)
+'Yellow: L3 (CG3 downwelling infrared reference)
+'Jumper: L3 to signal ground
+'Brown: H4 (CG3 upwelling infrared signal)
+'Green: L4 (CG3 upwelling infrared reference)
+'Jumper: L4 to signal ground
+'Black (thick): signal ground (shield)
+'
+'BF3
+'White: H5 (Total radiation signal) (Chibougamau = Red)
+'Green: L5 (Total radiation reference) (Chibougamau = Green)
+'Grey: H6 (Diffuse radiation signal) (Chibougamau = Yellow)
+'Jumper L6 to L5 (Diffuse radiation reference) (Chibougamau = Green)
+'Yellow: H7 (Sunshine signal) (Chibougamau = Grey)
+'Jumper L7 to L6 (Sunshine reference) (Chibougamau = Green)
+'Purple: G (Power ground) (Chibougamau = Purple)
+'Red: 12V (Power) (Chibougamau = White)
+'Braid: Datalogger frame (Chibougamau = bare wire)
+'Blue: Not used - Do not connect
+'
+'BF3 heater: use 12V on power strip, not on datalogger
+'
+'LI-190 #1 (upwelling)
+'Red: H8 (signal)
+'Black: L8 (signal reference)
+'Clear: signal ground (shield)
+'
+'LI-190 #2 (downwelling)
+'Red: H9 (signal)
+'Black: L9 (signal reference)
+'Clear: signal ground (shield)
+'
+'TR-525s tipping bucket rain gauge
+'Grey: P2 (signal)
+'Black: signal ground
+
+
+
+
+'*** Constants ***
+Const SCAN_INTERVAL = 2		 'scan interval in seconds
+Const OUTPUT_INTERVAL = 1   'output interval in minutes
+
+'*** Calibration factors ***
+Const CNR1_Cal = 125    '(Multiplier: 1000/Sensitivity=1000/???=??? S/N ???)
+
+'** Port assignments **
+Const MUX_RST = 1       'Control port on CR1000
+Const MUX_CLK = 2       'Control port on CR1000
+Const MUX_DIFF_CH = 1   'DIFF Channel on CR1000 for mux COM ODD
+Const PT100_DIFF_CH = 2 'DIFF channel on CR1000
+Const PT100_EX_CH = 2   'Excitation port on CR1000
+Const WIND_SE_CH = 7    'SE channel on CR1000
+Const WIND_P_CH = 1     'Pulse port on CR1000
+Const WIND_EX_CH = 1    'Excitation port on CR1000
+Const RAIN_P_CH = 2     'Pulse port on CR1000
+Const AtmP_SE_CH = 8    'SE channel on CR1000
+
+' *** Variables ***
+Public Wind_dir, Wind_dir_mV 'Wind direction (Gill 12005D)
+Units Wind_dir_mV = mV
+Units Wind_dir = degrees
+Public Wind_speed, Wind_speed_pulses 'Wind speed (Gill 12005D)
+Units Wind_speed_pulses = pulses
+Units Wind_speed = m/s
+
+Public CNR1_temp, CNR1_temp_K 'temperature (CNR1)
+Units CNR1_temp = degC
+Units CNR1_temp_K = K
+
+Public CNR1_mV(4) 'pyranometer (CM3, shortwave) and pyrgeometer (CG3, longwave) (CNR1)
+Alias CNR1_mV(1) = Short_downwelling_mV
+Alias CNR1_mV(2) = Short_upwelling_mV
+Alias CNR1_mV(3) = Long_downwelling_mV
+Alias CNR1_mV(4) = Long_upwelling_mV
+Units Short_downwelling_mV = mV
+Units Short_upwelling_mV = mV
+Units Long_downwelling_mV = mV
+Units Long_upwelling_mV = mV
+
+Public CNR1_W_m2(4) 'pyranometer (CM3, shortwave) and pyrgeometer (CG3, longwave) (CNR1)
+Alias CNR1_W_m2(1) = Short_downwelling
+Alias CNR1_W_m2(2) = Short_upwelling
+Alias CNR1_W_m2(3) = Long_downwelling
+Alias CNR1_W_m2(4) = Long_upwelling
+Units Short_downwelling = W/m^2
+Units Short_upwelling = W/m^2
+Units Long_downwelling = W/m^2
+Units Long_upwelling = W/m^2
+
+Public CNR1_W_m2_corr(2) ' CG3 measurements need to get corrected
+Alias CNR1_W_m2_corr(1) = Long_downwelling_corr
+Alias CNR1_W_m2_corr(2) = Long_upwelling_corr
+Units Long_downwelling_corr = W/m^2
+Units Long_upwelling_corr = W/m^2
+
+Public par_mV(2) 'PAR sensor (LI-190)
+Alias par_mV(1) = par_upwelling_mV
+Alias par_mV(2) = par_downwelling_mV
+Units par_upwelling_mV = mV
+Units par_downwelling_mV = mV
+
+Public par_umol_m2_s(2) 'PAR sensor (LI-190)
+Alias par_umol_m2_s(1) = par_upwelling_umol_m2_s
+Alias par_umol_m2_s(2) = par_downwelling_umol_m2_s
+Units par_upwelling_umol_m2_s = umol/m^2 s^-1
+Units par_downwelling_umol_m2_s = umol/m^2 s^-1
+
+Public BF3_W_m2(3) 'Sunshine meter (BF3)
+Alias BF3_W_m2(1) = Total_rad_W_m2
+Alias BF3_W_m2(2) = Diffuse_rad_W_m2
+Alias BF3_W_m2(3) = Sunshine_W_m2
+Units Total_rad_W_m2 = W/m^2
+Units Diffuse_rad_W_m2 = W/m^2
+Units Sunshine_W_m2 = W/m^2
+
+Public rain_mm 'rain gauge (TR-525S)
+Units rain_mm = mm
+
+Public AtmP_mV, AtmP 'Atmospheric pressure
+Units AtmP_mV = mV
+Units AtmP = kPa
+
+Public Batt_Volt, Panel_Temp 'battery voltage; panel temperature of CR1000
+Units Batt_Volt = V
+Units Panel_Temp = degC
+
+'Public real_time(9)
+'Alias real_time(1) = Year
+'Alias real_time(2) = Month
+'Alias real_time(3) = Day_of_month
+'Alias real_time(4) = Hours
+'Alias real_time(5) = Minutes
+'Alias real_time(6) = Seconds
+'Alias real_time(7) = Microseconds
+'Alias real_time(8) = Weekday
+'Alias real_time(9) = Jday
+
+Dim LoopCount
+
+
+'Define Data Tables
+DataTable (MetSensors,1,-1)
+  DataInterval (0,OUTPUT_INTERVAL,Min,-1)
+  CardOut (0,-1)
+'  Sample(1,Year,FP2)
+'	Sample(1,Month,FP2)
+'	Sample(1,Day_of_month,FP2)
+'	Sample(1,Hours,FP2)
+'	Sample(1,Minutes,FP2)
+'	Sample(1,Seconds,FP2)
+'	Sample(1,Jday,FP2)
+  Minimum (1,Batt_Volt,FP2,0,False)
+  Average (1,Panel_Temp,FP2,False)
+  WindVector (1,Wind_speed,Wind_dir,FP2,False,0,0,0)
+  FieldNames ("WindSpeed,WindDir,WindDirSD")
+  Average (2,par_mV,FP2,False)
+  Average (2,BF3_W_m2,FP2,False)
+  Totalize (1,BF3_W_m2(3),FP2,False)'???
+  Average (4,CNR1_mV,FP2,False)
+  Average (1,CNR1_temp,FP2,False)
+  Average (1,AtmP,FP2,False)
+  Totalize (1,rain_mm,FP2,False)
+EndTable
+
+'Main Program
+BeginProg
+  Scan(SCAN_INTERVAL,Sec,1,0)
+    'Datalogger Battery Voltage
+    Battery(Batt_Volt)
+    
+    'Datalogger panel temperature
+    PanelTemp (Panel_Temp,250)
+    
+    'Measure tipping bucket rain gauge
+    PulseCount(rain_mm,1,RAIN_P_CH,2,0,0.254,0) 'multiplier = 0.254 to convert to mm
+    
+    'Measure microvane and cup anemometer
+    PulseCount(Wind_speed_pulses,1,WIND_P_CH,0,0,1,0)
+	 	'BrHalf(Wind_dir_mV,1,mV2500C,WIND_SE_CH,WIND_EX_CH,1,2500,True,0,_50Hz,1,0) 'Why use mV2500C? I don't think we need it, except if we have another program example saying so.
+	 	BrHalf(Wind_dir_mV,1,mV2500,WIND_SE_CH,WIND_EX_CH,1,2500,True,0,_50Hz,1,0)
+
+    'Measure PT-100 on CNR1
+    BrHalf4W(CNR1_temp,1,mV25,mV25,PT100_DIFF_CH,PT100_EX_CH,1,2100,True,True,0,250,1.0,0)
+    PRT(CNR1_temp,1,CNR1_temp,1.0,0)
+    
+    'Measure PTB100 atmospheric pressure sensor
+    VoltSe (AtmP_mV,1,mV2500,AtmP_SE_CH,1,0,_50Hz,1.0,0) '500 is lower limit of pressure range
+
+    '*****
+    'Turn AM16/32 Multiplexer On
+    PortSet(MUX_RST,1)
+    
+    LoopCount=1
+    SubScan(0,mSec,2)
+      PulsePort(MUX_CLK,10000)
+      'Measure CM3 sensors on CNR1 (on the AM16/32 Multiplexer)
+      VoltDiff(CNR1_mV(LoopCount),1,mV25,MUX_DIFF_CH,True,0,_50Hz,1.0,0)
+      LoopCount=LoopCount+1
+    NextSubScan
+    
+    LoopCount=3
+    SubScan(0,mSec,2)
+      PulsePort(MUX_CLK,10000)
+      'Measure CG3 sensors on CNR1 (on the AM16/32 Multiplexer)
+      VoltDiff(CNR1_mV(LoopCount),1,mV7_5,MUX_DIFF_CH,True,0,_50Hz,1.0,0)
+      LoopCount=LoopCount+1
+    NextSubScan
+    
+    LoopCount=1
+    SubScan(0,mSec,2)
+      PulsePort(MUX_CLK,10000)
+      'Measure total and diffuse radiation with BF3 sensor (on the AM16/32 Multiplexer)
+      VoltDiff(BF3_W_m2(LoopCount),1,mV2500,MUX_DIFF_CH,True,0,_50Hz,0.5,0) 'Multiplier=0.5 to convert mV to W/m2
+      LoopCount=LoopCount+1
+    NextSubScan
+    
+    SubScan(0,mSec,1)
+      PulsePort(MUX_CLK,10000)
+      'Measure sunshine with BF3 sensor (on the AM16/32 Multiplexer)
+      VoltDiff(BF3_W_m2(3),1,mV2500,MUX_DIFF_CH,True,0,_50Hz,1,0)
+    NextSubScan
+    
+    'MEASURE 2 LI-190
+    LoopCount=1
+    SubScan(0,mSec,2)
+      PulsePort(MUX_CLK,10000)
+      'LI-190 PAR sensors (on the AM16/32 Multiplexer)
+      VoltDiff(par_mV(LoopCount),1,mV25,MUX_DIFF_CH,True,0,_50Hz,1,0)
+      LoopCount=LoopCount+1
+    NextSubScan
+    
+    'Turn AM16/32 Multiplexer Off
+    PortSet(MUX_RST,0)
+    '*****
+    
+    '*****
+    'Convert raw measurements to meaningful units when the calibration factors/equations won't ever change
+    '*****
+    'LI-190 conversion from mV to umol/m2*s
+    par_upwelling_umol_m2_s = par_mV(1)*2000/10 'Type SL sensor with standardized output of 10mV/2000umol m-2 s-1
+    par_downwelling_umol_m2_s = par_mV(2)*2000/10 'Type SL sensor with standardized output of 10mV/2000umol m-2 s-1
+    
+    'Convert wind speed pulses to m/s
+    Wind_speed = 28.6*Wind_speed_pulses/(300*SCAN_INTERVAL)
+    
+    'Convert wind direction mV to degrees
+    Wind_dir = Wind_dir_mV*360/2500 'Compute ratio of mV measured and excitation voltage (2500mV) and multiply by 360 to convert to degrees
+    'Or should we do as in the 03001 WindSentry manual and use BrHalf(Wind_dir_mV,1,mV2500,WIND_SE_CH,WIND_EX_CH,1,2500,True,0,_50Hz,355,0) ???
+ 	 	If Wind_dir>=360 OR Wind_dir<0 Then Wind_dir=0
+ 	 	
+ 	 	'Convert atrmospheric pressure mV to kPa 
+ 	 	AtmP = (500+((1100-500)/2.5)*AtmP_mV)*0.1
+
+
+    '*****
+    'Apply calibration factors that may be updated in the future (for real time viewing only)
+    '*****
+    'PT-100 conversion to Kelvin
+    CNR1_temp_K = CNR1_temp + 273.15
+    
+    'CNR1 conversion from uV to W/m2
+    For LoopCount = 1 To 4 Step 1
+      CNR1_W_m2(LoopCount)=CNR1_mV(LoopCount)*CNR1_Cal
+    Next
+    Long_downwelling_corr=CNR1_W_m2(3)+5.67*10^-8*CNR1_temp_K^4
+    Long_upwelling_corr=CNR1_W_m2(4)+5.67*10^-8*CNR1_temp_K^4
+
+    
+'    'Get timestamps
+'    RealTime(real_time)
+    
+    'Call Data Tables and Store Data
+    CallTable(MetSensors)
+  NextScan
+EndProg

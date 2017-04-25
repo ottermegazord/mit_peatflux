@@ -1,0 +1,366 @@
+'CR800 Series Datalogger
+
+'************************
+'************************
+'QUESTIONS:
+'-What type of timestamps, if any, do you want in the data files? Make sure they are as we want.
+'-Is there a reason why at SingTel you don't measure the heat flux plates the same way Campbell does in the manual? (i.e. you measure both sensor 
+'and heater with differential measurement and the same voltage range, while Campbell uses differential for sensor and single-ended for heater 
+'with different voltage ranges?)
+'-We will have to update calibration factors for the heat flux plates depending on the specific sensors we use.
+'************************
+'************************
+
+
+'Program for CR800 soil datalogger
+'Includes 4 TDR, 2 HFP, 2 TCAV, 3 thermistors 107, 3 T4e tensiometers
+'
+'Last modified June 18, 2013 by Marc Giasson
+
+'Wiring:
+'
+'AM16/32B multiplexer (IN 2x32 MODE)
+'COM ODD H: 1H
+'COM ODD L: 1L
+'COM GROUND: Signal ground
+'RES: C1
+'CLK: C2
+'GND: G
+'12V: 12V
+'Shield: Signal ground
+'Ground lug: earth ground via 8AWG wire
+'
+'********
+'FOR SENSOR WIRES, ALL H AND L WIRES ARE CONNECTED TO THE MULTIPLEXER; EX AND CTRL WIRES ARE CONNECTED TO THE DATALOGGER.
+'WIRES TO GROUNDS AND SIGNAL GROUNDS SHOULD BE WIRED TO THE PORT CLOSEST TO THE MEASUREMENT PORTS (H, L) USED.
+'********
+'
+'HFP (HFP01SC) #1  WAS THE SENSOR BOUGHT FROM HUKSEFLUX OR CAMPBELL? (I.E., DO WE NEED A RESISTOR? HUKSEFLUX=YES, CAMPBELL=NO;
+'ALSO, DOUBLE-CHECK THAT WIRING IS OK AND SENSOR GIVES GOOD DATA)
+'Sign convention: positive when flux is toward ground
+'SE measurement possible but not recommended; we use differential measurements
+'White: H1 (sensor signal)
+'Green: L1 (sensor signal reference)
+'Black: signal ground
+'Brown: SW12 (power)
+'Green + resistor: H3 (heater resistance signal)
+'Resistor: L3 (heater resistance signal reference)
+'Blue from resistor: signal ground
+'Black: G (power reference)
+'
+'HFP (HFP01SC) #2
+'White: H2 (sensor signal)
+'Green: L2 (sensor signal reference)
+'Black: signal ground
+'Brown: SW12 (power)
+'Green + resistor: H4 (heater resistance signal)
+'Resistor: L4 (heater resistance signal reference)
+'Blue from resistor: signal ground
+'Black: G (power reference)
+'
+'TCAV #1
+'Purple: H5 (signal)
+'Red: L5 (signal reference)
+'Clear: signal ground (shield)
+'
+'TCAV #2
+'Purple: H6 (signal)
+'Red: L6 (signal reference)
+'Clear: signal ground (shield)
+'
+'T4e tensiometer #1
+'Brown: EX2 (Power supply pos)
+'Blue: G (Power supply neg)
+'White: H7 (signal)
+'Black: L7 (signal ground)
+'Thick black: signal ground (shield)
+'
+'T4e tensiometer #2
+'Brown: EX2 (Power supply pos)
+'Blue: G (Power supply neg)
+'White: H8 (signal)
+'Black: L8 (signal ground)
+'Thick black: signal ground (shield)
+'
+'T4e tensiometer #3
+'Brown: EX2 (Power supply pos)
+'Blue: G (Power supply neg)
+'White: H9 (signal)
+'Black: L9 (signal ground)
+'Thick black: signal ground (shield)
+'
+'TDR (CS616) #1
+'Red: 12V (power)
+'Green: H10 (output)
+'Orange: C3 (enable)
+'Black: G (signal ground)
+'Clear: G (shield, power ground)
+'
+'TDR (CS616) #2
+'Red: 12V (power)
+'Green: L10 (output)
+'Orange: C3 (enable)
+'Black: G (signal ground)
+'Clear: G (shield, power ground)
+'
+'TDR (CS616) #3
+'Red: 12V (power)
+'Green: H11 (output)
+'Orange: C3 (enable)
+'Black: G (signal ground)
+'Clear: G (shield, power ground)
+'
+'TDR (CS616) #4
+'Red: 12V (power)
+'Green: L11 (output)
+'Orange: C (enable)
+'Black: G (signal ground)
+'Clear: G (shield, power ground)
+'
+'107 #1
+'Black: Vx1 (voltage excitation)
+'Red: H12 (signal)
+'Purple: signal ground
+'Clear: signal ground (shield)
+'
+'107 #2
+'Black: Vx1 (voltage excitation)
+'Red: L12 (signal)
+'Purple: signal ground
+'Clear: signal ground (shield)
+'
+'107 #3
+'Black: Vx1 (voltage excitation)
+'Red: H13 (signal)
+'Purple: signal ground
+'Clear: signal ground (shield)
+
+
+'*** Constants ***
+Const SCAN_INTERVAL = 600		'scan interval in seconds 600
+Const OUTPUT_INTERVAL = 10 'output interval in minutes 10
+Const HFP_CAL_INTERVAL = 1440 'heat flux plates calibration interval in minutes
+
+'*** Calibration factors ***
+Const HeatFlux_cal1 = 15    'Unique multiplier for heat flux plate #1 (1000/sensitivity) S/N ???
+Const HeatFlux_cal2 = 15    'Unique multiplier for heat flux plate #2 (1000/sensitivity) S/N ???
+
+'*** Number of sensors ***
+Const NB_TDR = 4        'Number of TDR probes
+Const NB_Ts107 = 3      'Number of 107 soil temperature probes
+Const NB_HFP = 2        'Number of heat flux plates
+Const NB_TCAV = 2       'Number of TCAV probes
+Const NB_T4e=3          'Number of T4e tensiometers
+
+'** Port assignments **
+Const MUX_RST = 1       'Control port on CR1000
+Const MUX_CLK = 2       'Control port on CR1000
+Const MUX_DIFF_CH_1 = 1 'DIFF Channel on CR1000 for mux COM ODD
+Const MUX_SE_CH_1 = 1   'SE Channel on CR1000 for mux COM ODD HIGH
+Const MUX_SE_CH_2= 2    'SE Channel on CR1000 for mux COM ODD LOW
+Const TDR_CTRL_CH = 3   'Control port on CR1000
+Const Ts107_EX_CH = 1   'Excitation port on CR1000
+Const T4e_EX_CH = 2     'Excitation port on CR1000
+
+' *** Variables ***
+Public PA_uS(4) 'CS616 period
+Alias PA_uS(1) = PA_uS_1
+Alias PA_uS(2) = PA_uS_2
+Alias PA_uS(3) = PA_uS_3
+Alias PA_uS(4) = PA_uS_4
+Units PA_uS = uSec
+Public SoilWater(4)	'Soil water content
+Alias SoilWater(1) = SoilWater_1
+Alias SoilWater(2) = SoilWater_2
+Alias SoilWater(3) = SoilWater_3
+Alias SoilWater(4) = SoilWater_4
+Units SoilWater = fraction
+
+Public Ts_107(3)			'Soil temperature - 107 thermistor
+Alias Ts_107(1) = Ts_107_1
+Alias Ts_107(2) = Ts_107_2
+Alias Ts_107(3) = Ts_107_3
+Units Ts_107 = degC
+
+Public HeatFlux_mV(4)	'Soil heat flux (mV)
+Alias HeatFlux_mV(1) = HFlux_mV_sen_1 'diff voltage of soil heatflux plate sensor
+Alias HeatFlux_mV(2) = HFlux_mV_sen_2
+Alias HeatFlux_mV(3) = HFlux_mV_cur_1 'diff voltage across the current sensing resistor of heatflux plate
+Alias HeatFlux_mV(4) = HFlux_mV_cur_2
+Units HeatFlux_mV = mV
+
+Public HeatFlux_Wm2(2) 'Soil heat flux converted to W/m2
+Alias HeatFlux_Wm2(1) = HeatFlux_Wm2_1
+Alias HeatFlux_Wm2(2) = HeatFlux_Wm2_2
+Units HeatFlux_Wm2 = W/m^2
+
+Public Flag_HFP_cal 'Flag=1 - heating (1st 3 minutes) Flag=2 - calibration (next 3 minutes) Flag=0 - regular measurements
+
+Public Ts_TCAV(2)			'Soil temperature - TCAV
+Alias Ts_TCAV(1) = Ts_TCAV_1
+Alias Ts_TCAV(2) = Ts_TCAV_2
+Units Ts_TCAV = degC
+
+Public Batt_Volt, Panel_Temp 'battery voltage; panel temperature of CR1000
+Units Batt_Volt = V
+Units Panel_Temp = degC
+
+Public Tensiometer(3) 'T4e tensiometers
+Alias Tensiometer(1) = Tensiometer_1
+Alias Tensiometer(2) = Tensiometer_2
+Alias Tensiometer(3) = Tensiometer_3
+Units Tensiometer=kPa
+
+Public par, par2
+Units par = mV
+Units par2 = mV
+'Public real_time(9)
+'Alias real_time(1) = Year
+'Alias real_time(2) = Month
+'Alias real_time(3) = Day_of_month
+'Alias real_time(4) = Hours
+'Alias real_time(5) = Minutes
+'Alias real_time(6) = Seconds
+'Alias real_time(7) = Microseconds
+'Alias real_time(8) = Weekday
+'Alias real_time(9) = Jday
+
+Dim LoopCount
+Dim LoopCount2
+
+
+'Define Data Tables
+DataTable (Soil,1,-1)
+  DataInterval (0,OUTPUT_INTERVAL,min,-1)
+'  CardOut (0,-1)
+'  Sample(1,Year,FP2)
+'	Sample(1,Month,FP2)
+'	Sample(1,Day_of_month,FP2)
+'	Sample(1,Hours,FP2)
+'	Sample(1,Minutes,FP2)
+'	Sample(1,Seconds,FP2)
+'	Sample(1,Jday,FP2)
+	Sample(1,Batt_Volt,FP2)
+  Sample(1,Panel_Temp,FP2)
+  Sample(NB_TDR,SoilWater,FP2)
+  'Sample(NB_Ts107,Ts_107,FP2)
+  'Sample(NB_TCAV,Ts_TCAV,FP2)
+  'Sample(NB_HFP*2,HeatFlux_mV,FP2)
+  'Sample(1,Flag_HFP_cal,FP2)
+  Sample(NB_T4e,Tensiometer,FP2)
+  Average(1,par,FP2,False)
+	Average(1,par2,FP2,False)
+EndTable
+
+'Subroutines
+Sub HFP_cal
+  'Calibrate heat flux plates on a fixed interval
+  If IfTime(720,HFP_CAL_INTERVAL,3) Then
+    SW12(1) 'Turn on 12V switch
+    Flag_HFP_cal = 1 'heater 
+  EndIf
+  If IfTime(723,HFP_CAL_INTERVAL,3) Then
+    SW12(0) 'Turn off 12V switch after 3 minutes
+    Flag_HFP_cal = 2 'calibration data
+  EndIf
+  If IfTime(726,HFP_CAL_INTERVAL,3) Then
+    Flag_HFP_cal = 0 'back to regular measurements
+  EndIf  
+EndSub
+
+'Main Program
+BeginProg
+  Scan(SCAN_INTERVAL,Sec,1,0)
+
+    'Datalogger Battery Voltage
+    Battery(Batt_Volt)
+    
+    'Datalogger panel temperature
+    PanelTemp (Panel_Temp,250)
+    
+    'Turn heater on/off for HFP calibration
+    HFP_cal
+  
+    VoltDiff(par,1,mV25,2,True,0,_50Hz,1.0,0)
+	  VoltDiff(par2,1,mV25,3,True,0,_50Hz,1.0,0)
+
+    'Turn AM16/32 Multiplexer On
+    PortSet(MUX_RST,1)
+    
+    LoopCount=1
+    SubScan(0,mSec,NB_HFP)
+      PulsePort(MUX_CLK,10000)
+      'Measure heat flux plates sensors (on the AM16/32 Multiplexer)
+      VoltDiff(HeatFlux_mV(LoopCount),1,mV25C,MUX_DIFF_CH_1,True,0,_50Hz,1.0,0.0)
+      LoopCount=LoopCount+1
+    NextSubScan
+    
+    LoopCount=3
+    SubScan(0,mSec,NB_HFP)
+      PulsePort(MUX_CLK,10000)
+      'Measure heat flux plates sensors (on the AM16/32 Multiplexer)
+      VoltDiff(HeatFlux_mV(LoopCount),1,mV5000,MUX_DIFF_CH_1,True,0,_50Hz,1.0,0.0)
+      LoopCount=LoopCount+1
+    NextSubScan
+    
+    LoopCount=1
+    SubScan(0,mSec,NB_TCAV)
+      PulsePort(MUX_CLK,10000)
+      'Measure TCAV (on the AM16/32 Multiplexer)
+      TCDiff(Ts_TCAV(LoopCount),1,mV2_5C,MUX_DIFF_CH_1,TypeE,Panel_Temp,True,0,_50Hz,1,0)
+      LoopCount=LoopCount+1
+    NextSubScan
+        
+    LoopCount=1
+    SubScan(0,mSec,NB_T4e)
+      PulsePort(MUX_CLK,10000)
+      'Measure T4e tensiometers (on the AM16/32 Multiplexer)
+      BrFull(Tensiometer(LoopCount),1,mV250,MUX_DIFF_CH_1,T4e_EX_CH,NB_T4e,2500,False,False,0,_50Hz,-10.6,0.0)
+      LoopCount=LoopCount+1
+    NextSubScan
+		  
+    LoopCount=1
+    LoopCount2=2
+    SubScan(0,mSec,2)
+      PulsePort(MUX_CLK,10000)
+      'Measure TDR (CS616) soil volumetric water content (on the AM16/32 Multiplexer)
+      CS616(PA_uS(LoopCount),1,MUX_SE_CH_1,TDR_CTRL_CH,1,1,0)
+      Delay(0,20,mSec)
+      CS616(PA_uS(LoopCount2),1,MUX_SE_CH_2,TDR_CTRL_CH,1,1,0)
+      LoopCount=LoopCount+2
+      LoopCount2=LoopCount2+2
+    NextSubScan
+
+    SubScan(0,mSec,1)
+      PulsePort(MUX_CLK,10000)
+      'Measure 107 soil temperature sensors (on the AM16/32 Multiplexer)
+      Therm107(Ts_107(1),1,MUX_SE_CH_1,Ts107_EX_CH,0,_50Hz,1.0,0.0)
+      Delay(0,20,mSec)
+      Therm107(Ts_107(2),1,MUX_SE_CH_2,Ts107_EX_CH,0,_50Hz,1.0,0.0)
+    NextSubScan
+    
+    SubScan(0,mSec,1)
+      PulsePort(MUX_CLK,10000)
+      'Measure last 107 soil temperature sensor (on the AM16/32 Multiplexer)
+      Therm107(Ts_107(3),1,MUX_SE_CH_1,Ts107_EX_CH,0,_50Hz,1.0,0.0)
+    NextSubScan
+    
+    'Turn AM16/32 Multiplexer Off
+    PortSet(MUX_RST,0)
+    
+    'Convert TDR sensor period to fraction water content
+    For LoopCount = 1 To NB_TDR Step 1
+      SoilWater(LoopCount)=-0.0663+(-0.0063*PA_uS(LoopCount))+(0.0007*PA_uS(LoopCount)^2)
+    Next
+    
+    'Convert heat flux plates voltage measurements to W/m2 (for real time viewing only - proper recalibration and calculations to be done on the computer)
+    HeatFlux_Wm2(1) = HeatFlux_mV(1)*HeatFlux_cal1
+    HeatFlux_Wm2(2) = HeatFlux_mV(2)*HeatFlux_cal2
+    
+'    'Get timestamps
+'    RealTime(real_time)
+
+    'Call Data Tables and Store Data
+    CallTable(Soil)
+  NextScan
+EndProg

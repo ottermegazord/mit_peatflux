@@ -1,0 +1,45 @@
+'CR800 Series
+'Created by Short Cut (3.0)
+
+'Declare Variables and Units
+Public BattV
+Public PTemp_C
+Public PAR_Den
+Public PAR_Tot
+
+Units BattV=Volts
+Units PTemp_C=Deg C
+Units PAR_Den=umol/s/m^2
+Units PAR_Tot=mmol/m^2
+
+'Define Data Tables
+DataTable(Table1,True,-1)
+	DataInterval(0,500,mSec,10)
+	Sample(1,BattV,FP2)
+	Sample(1,PTemp_C,FP2)
+	Totalize(1,PAR_Tot,IEEE4,False)
+	Sample(1,PAR_Den,FP2)
+EndTable
+
+DataTable(Table2,True,-1)
+	DataInterval(0,1440,Min,10)
+	Minimum(1,BattV,FP2,False,False)
+EndTable
+
+'Main Program
+BeginProg
+	'Main Scan
+	Scan(500,mSec,1,0)
+		'Default Datalogger Battery Voltage measurement 'BattV'
+		Battery(BattV)
+		'Default Wiring Panel Temperature measurement 'PTemp_C'
+		PanelTemp(PTemp_C,_50Hz)
+		'LI190SB Quantum Sensor measurements 'PAR_Tot' and 'PAR_Den
+		VoltDiff(PAR_Den,1,mV25,1,True,0,_50Hz,1,0)
+		If PAR_Den<0 Then PAR_Den=0
+ 
+		'Call Data Tables and Store Data
+		CallTable(Table1)
+		CallTable(Table2)
+	NextScan
+EndProg

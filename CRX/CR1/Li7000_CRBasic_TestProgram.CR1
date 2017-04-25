@@ -1,0 +1,41 @@
+'CR1000 Series Datalogger
+'Instrument: LI-7000
+'Created in LoggerNet CRBasic
+'date: 6 October 2009
+'program author: Jan Ng
+
+'Declare Public Variables
+'Example:
+Public batt_volt, Pressure
+
+'Declare Other Variables
+'Example:
+'Dim Counter
+
+'Declare Constants
+'Example:
+'CONST PI = 3.141592654	
+
+'Define Data Tables
+DataTable (PressureTest,True,-1)
+	DataInterval (0,20,Sec,0)
+	Sample (1,Pressure,IEEE4)
+EndTable
+
+'Define Subroutines
+'Sub
+	'EnterSub instructions here
+'EndSub
+
+'Main Program
+BeginProg
+	Scan (2,Sec,0,0)
+		Battery (Batt_volt)
+		VoltSe (Pressure, 1, mv2500, 1, True, 0, _50Hz, 1.0, 0.0)
+		'Enter other measurement instructions
+		'Call Output Tables
+		'Example:
+		CallTable PressureTest
+	NextScan
+EndProg
+

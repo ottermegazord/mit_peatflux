@@ -1,0 +1,95 @@
+'15 January 2010, attempt by Jan Ng
+'21 January 2010, confirmed as usable!
+'Instrument: CSAT-3
+
+SequentialMode
+
+
+'*** Constants ***
+
+
+'Measurement Rate				        '10 Hz
+Const EDDY_SCAN = 100			  '100 mSec
+Const SLOW_SCAN = 1             'Low-frequency data interval in minutes
+
+'Output period
+Const EDDY_OUTPUT = 100			  'Raw data output interval in mSec
+Const SLOW_OUTPUT = 10            'Low-frequency data output interval in minutes
+
+Const CSAT3_AZIMUTH = 0				   'Unique value.
+
+Const CSAT_OPT = INT (1000/EDDY_SCAN) 	'Compute CSAT3 Execution Parameter
+
+Const SDM_PER = 30 				'Default SDM clock speed.
+
+
+'*** Variables ***
+
+
+'Online lagged CSAT3 data.
+Public wind(5)
+Alias wind(1) = Ux
+Alias wind(2) = Uy
+Alias wind(3) = Uz
+Alias wind(4) = Ts
+Alias wind(5) = diag_csat
+
+Units Ux = m/s
+Units Uy = m/s
+Units Uz = m/s
+Units Ts = C
+Units diag_csat = unitless
+
+'CRBasic datalogger battery voltage
+Public batt_volt 
+Public panel_temp
+
+Units batt_volt = V
+Units panel_temp = C
+
+'Number of samples in the online stats
+Dim n 
+
+Units n = samples
+
+
+'*** Final Output Data Tables ***
+
+
+'Eddy data table
+DataTable (eddy_data,TRUE,-1)
+  CardOut(1,-1000)  'set the table on fill and stop mode
+  DataInterval (0,EDDY_OUTPUT,mSec,0)
+	Sample (1,Ux,IEEE4)
+	Sample (1,Uy,IEEE4)
+	Sample (1,Uz,IEEE4)
+	Sample (1,Ts,IEEE4)
+	Sample (1,diag_csat,IEEE4)
+EndTable
+
+'Slow data table
+DataTable (slow_data,TRUE,-1)
+  CardOut(1,-1000)  'set the table on fill and stop mode
+  DataInterval (0,SLOW_OUTPUT,sec,0)
+  Minimum (1,batt_volt,FP2,False,False)
+  Sample (1,panel_temp,FP2)
+EndTable
+
+'*** Program ***
+
+
+BeginProg
+  
+	Move (Ux,5,NaN,1)   			'Set all CSAT3 variables to NaN.
+	SDMSpeed (SDM_PER)  			'Set the SDM clock speed.
+	Scan (EDDY_SCAN,mSec,3,0)
+		CSAT3 (Ux,1,3,91,CSAT_OPT)   	'Get CSAT3 wind and sonic temperature data.
+		CallTable (eddy_data)
+		If IfTime(0,SLOW_SCAN,sec) Then
+		  Battery (batt_volt)
+	    PanelTemp (panel_temp,250)
+	    CallTable (slow_data)
+		EndIf 
+	NextScan
+
+EndProg

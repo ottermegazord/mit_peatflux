@@ -1,0 +1,25 @@
+'Written by Jan Ng, 30 September 2009
+'No program available for modification
+
+'*** Declaring Variables ***
+Public RadTot
+Public RadDiffuse
+Public Batt_volt
+
+'*** Defining Data Tables ***
+DataTable(BF3, True, -1)
+	DataInterval(0, 10, Sec, 0)
+	Minimum(1, Batt_volt, IEEE4, 0, False)
+	Average(1, RadTot, IEEE4, 0)
+	Average(1, RadDiffuse, IEEE4, 0)
+EndTable
+
+'*** Main Program ***
+BeginProg
+	Scan(1, Sec, 1, 0)
+		Battery(Batt_volt)
+		VoltSe(RadTot, 1, mV2_5, 1, True, 0, _50Hz, 1.0, 0.0)
+		VoltSe(RadDiffuse, 1, mV2_5, 2, True, 0, _50Hz, 1.0, 0.0)
+		CallTable(BF3)
+	NextScan
+EndProg

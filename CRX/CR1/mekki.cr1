@@ -1,0 +1,183 @@
+'V4.2 Card out
+'v4 Based on v3, This add 4 more Moisture and Temperature sensor at multiplexer (By Ming Hui, 25 April 2012) 
+'v3: Change the heating time of heatflux plate from every three hours to every six hours, and last for three minutes.
+'v2: Based on 'singtel_300810_Alex.CR1. This add more sensors (soil heat flux plate, temperature probe, and moisture probe')
+'   to the AM16/32B multiplexer. (by Kai, May 18,2011) 
+
+'Data Logger: CR1000
+
+
+'PipeLineMode  I don't think PipeLineMode is an option for us because we need conditional execution
+
+'*** Constants ***
+Const SCAN_INTERVAL_EC = 100			  '100 mSec=10Hz, eddy covariance
+Const SCAN_INTERVAL_NON_EC = 10     'measurement interval in seconds for other instruments
+Const OUTPUT_INTERVAL_NON_EC = 1    'output interval in minutes for other instruments
+Const CSAT3_AZIMUTH = 0			'Unique value.
+Const SDM_PER = 30				'Default SDM clock speed.
+
+'** Port assignments **
+Const REL_HUM_SE_CH = 1 'number of SE channel on CR1000
+Const WIND_SE_CH = 2    'number of SE channel on CR1000
+Const T_DIFF_CH = 2     'number of Diff channel on CR1000
+Const TOT_RAD_SE_CH = 7 'number of SE channel on CR1000
+Const DIF_RAD_SE_CH = 8 'number of SE channel on CR1000
+Const MUX_DIFF_CH = 5   'number of Diff channel on CR1000
+Const CNR1_T_DIFF_CH = 6'number of Diff channel on CR1000
+Const RAIN_PULSE_CH = 1 'number of Pulse channel on CR1000
+Const WIND_PULSE_CH = 2 'number of Pulse channel on CR1000
+Const MUX_RST = 4       'number of Control port on CR1000
+Const MUX_CLK = 5       'number of Control port on CR1000
+Const PA_uS_CH = 15     'number of SE channel on CR1000
+Const PA_uS_PO = 7      'number of Control port on CR1000
+Const MUX_SE_CH_1 = 9   'number of SE Channel on CR1000 Com Port Low(Multiplexer To CR1000)
+Const MUX_SE_CH_2= 10   'number of SE Channel on CR1000 Com Port Low(Multiplexer to CR1000)
+Const MUX_CON_PO = 6    'number of Control Port Channel on CR1000 (CS616)
+Const MUX_EXCITE = 2    'number of Excite Channel for CS107 On CR1000
+
+Const CSAT_OPT = INT (1000/SCAN_INTERVAL_EC)			'Compute CSAT3 Execution Parameter (10 or 20 Hz).
+                                                                                'CSAT3 variables with additional one or four scan delay.
+Public wind(5)					                                        'Wind, temperature, and diagnostic data from CSAT3.
+Alias wind(1) = Ux
+Alias wind(2) = Uy
+Alias wind(3) = Uz
+Alias wind(4) = C
+Alias wind(5) = diag_csat
+Units wind = m/s
+Units C = m/s
+Units diag_csat = unitless
+
+Public diag_bits(9)				'Warning flags.
+Alias diag_bits(1) = del_T_f		'Delta temperature warning flag.
+Alias diag_bits(2) = track_f		'Tracking (signal lock) warning flag.
+Alias diag_bits(3) = amp_h_f		'Amplitude warning high flag.
+Alias diag_bits(4) = amp_l_f		'Amplitude low warning flag.
+Alias diag_bits(5) = chopper_f	'Chopper warning flag.
+Alias diag_bits(6) = detector_f	'Detector warning flag.
+Alias diag_bits(7) = pll_f		'PLL warning flag.
+Alias diag_bits(8) = sync_f		'Synchronization warning flag.
+Alias diag_bits(9) = agc			'Automatic gain control.
+Units diag_bits = unitless
+
+Dim diag_csat_work As Long
+
+'Diagnostic variables.
+Dim disable_flag_on(4) As Boolean	'Intermediate processing disable flags.
+'disable_flag_on(1)				'TRUE when CSAT3 diagnostic warning flags are on or CSAT3 has no data.
+'disable_flag_on(2)				'TRUE when LI-7500 diagnostic warning flags are on or LI-7500 failed to send data.
+'disable_flag_on(3)				'TRUE when CSAT3 diagnostic warning flags are on.
+'                  				  Used to filter the sum of CSAT3 diagnostic warning flags.
+'disable_flag_on(4)				'TRUE when LI-7500 diagnostic warning flags are on.
+'                  				  Used to filter the sum of LI-7500 diagnostic warning flags.
+Dim n					'Number of samples in the online stats.
+Units n = samples
+
+Dim cov_disable_flag As Boolean	'TRUE when CSAT3 or LI-7500 reports bad 
+
+
+'*** Variables ***
+Public rain 'rain gauge (TR-525S)
+Units rain = tips
+
+Public rel_hum, Rs_Ro, T 'Relative Humidity and Temperature (HMP 155) 
+Units rel_hum = mV
+Units T = C
+
+Public wind_speed, wind_dir 'Wind speed and direction (Gill 12005D)
+Units wind_speed = pulses
+Units wind_dir = ratio
+
+Public cnr1_temp ' temperature (CNR1)
+Units cnr1_temp = C
+
+Public cnr1(4) 'pyranometer and pygeometer (CNR1)
+Alias cnr1(1) = cm3_up
+Alias cnr1(2) = cg3_up
+Alias cnr1(3) = cm3_down
+Alias cnr1(4) = cg3_down
+Units cm3_up = mV
+Units cg3_up = mV
+Units cm3_down = mV
+Units cg3_down = mV
+
+Public par(2) 'PAR sensor (LI-190)
+Alias par(1) = par_up
+Alias par(2) = par_down
+
+Public tot_rad, dif_rad 'Sunshine meter (BF3)
+Units tot_rad = mV
+Units dif_rad = mV
+
+Public batt_volt, panel_temp 'battery volt; panel temperature of CR1000
+Units batt_volt = V
+Units panel_temp = C
+
+Public soil_temp             'temperature of soil thermocouple proble (TCAV)
+Units soil_temp = C
+
+Public PA_uS, VWater          'period; water content fraction of TDR CS616
+Units PA_uS=uSec
+Units VWater=fraction
+Public VW(4)
+Public PA_uS_B(4)
+Units PA_uS_B=uSec
+Units VW = fraction
+
+Public T107_C(4)
+Units T107_C=Deg C
+
+
+
+Dim LCount_5
+
+Public VHeat(4) 'Soil heatflux plate (Hukseflux)
+Alias VHeat(1)=VHeat_cur 'dif voltage across the current sensing resistor of heatflux plate
+Alias VHeat(2)=VHeat_sen 'dif voltage of soil heatflux plate sensor
+Alias VHeat(3)=VHeat_cur2 'dif voltage across the current sensing resistor of heatflux plate
+Alias VHeat(4)=VHeat_sen2 'dif voltage of soil heatflux plate sensor
+Units VHeat_cur=mV
+Units VHeat_sen=mV
+Units VHeat_cur2=mV
+Units VHeat_sen2=mV
+
+' Working variables
+Dim I
+Dim P
+
+'*** Output Data Tables ***
+DataTable(non_ec_output_v3,TRUE,-1)
+  DataInterval(0,OUTPUT_INTERVAL_NON_EC,Min,-1) 'last var is max number of time stamps to add for lapses
+  Average(1,panel_temp,FP2,FALSE) 'FALSE here means do not disable
+  Minimum(1,batt_volt,FP2,FALSE,FALSE)
+  Average(1,rel_hum,FP2,FALSE)
+  Average(1,T,FP2,FALSE)
+  EndTable
+  
+BeginProg
+  Move (Ux,5,NaN,1)
+  SDMSpeed (SDM_PER)  
+	Scan(SCAN_INTERVAL_EC,mSec,3,0)
+	 	If IfTime(0,SCAN_INTERVAL_NON_EC,Sec) Then
+	 	  PanelTemp(panel_temp,250)
+	 	  Battery(batt_volt)
+	 	  VoltSe(rel_hum,1,mV5000,REL_HUM_SE_CH,True,0,_50Hz,1,0)
+	 	  BrHalf4W(Rs_Ro,1,mV25,mV25,T_DIFF_CH,Vx2,1,2035,True,True,0,250,1.0,0)
+	 	  PRT(T,1,Rs_Ro,1.0,0)
+	 	  PulseCount(rain,1,RAIN_PULSE_CH,2,0,1,0)
+	 	  PulseCount(wind_speed,1,WIND_PULSE_CH,0,0,1.0,0)
+	 	  BrHalf(wind_dir,1,mV2500C,WIND_SE_CH,Vx1,1,2500,True,0,_50Hz,1.0,0)
+	 	  VoltSe(tot_rad,1,mV2500,TOT_RAD_SE_CH,1,0,_50Hz,1.0,0)
+	 	  VoltSe(dif_rad,1,mV2500,DIF_RAD_SE_CH,1,0,_50Hz,1.0,0)
+	 	  ' !!! right now we have yellow in L, green in ground on 4WPB100 in diff ch 6, red and blue in h and L of diff ch 7; but not sure if this is right
+            '!!! I think it should be okay to reuse Rs_Ro as a working variable, but might be worth checking
+            BrHalf4W(Rs_Ro,1,mV25,mV25,CNR1_T_DIFF_CH,Vx3,1,2035,True,True,0,250,1.0,0)
+        
+      CallTable(non_ec_output_v3)
+	 	EndIf 
+  NextScan
+EndProg
+
+
+
+
+ 

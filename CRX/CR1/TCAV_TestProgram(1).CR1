@@ -1,0 +1,25 @@
+'Written by Jan Ng, 28 Sept. 2009
+'Modified from test program written for Type K thermocouple by Short Cut (2.5)
+
+' *** Declaring Variables ***
+Public Batt_volt
+Public Temp_C
+Public PTemp_C
+
+' *** Defining Data Tables ***
+DataTable(TCAV1min, True, -1)
+	DataInterval(0, 1, Min, 0)
+	Minimum(1, Batt_volt, FP2, 0, False)
+	Average(1, PTemp_C, FP2, False)
+	Average(1, Temp_C, FP2, False)
+EndTable
+
+'*** Main Program ***
+BeginProg
+	Scan(1, Sec, 1, 0)
+		Battery(batt_volt)
+		PanelTemp(PTemp_C, _50Hz)
+		TCDiff(Temp_C, 1, mv2_5c, 1, TypeK, PTemp_C, True, 0, _50Hz, 1, 0)
+		CallTable(TCAV1min)
+	NextScan
+EndProg

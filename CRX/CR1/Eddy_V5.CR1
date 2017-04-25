@@ -1,0 +1,889 @@
+'CR1000 program to control the eddy covariance and profile system.
+'
+'Last modified 6/24/2013 by Marc-Andre Giasson
+'
+'****************************
+'TO IMPLEMENT:
+'-Calibration
+'    -LI-7000 (DONE)
+'    -LI-840 (DONE)
+'-Zero
+'    -LI-7000 (DONE)
+'    -LI-840 (DONE)
+'-Switch from sampling to calibration
+'    -LI-7000 (DONE)
+'    -LI-840 (DONE)
+'-Profile height switch (8 solenoid valves) (DONE)
+'-Flowmeters (We will probably not use any)
+'    -Eddy
+'    -Profile
+'-MFCs
+'    -Eddy B
+'    -Profile
+'-Measuring LI-840
+'-Measuring LI-7000
+'-Pump
+'-Reservoir transducer
+'-Panel temperature, battery voltage (on a different scan interval) (DONE)
+'-Save data, flags, etc. to tables
+'****************************
+
+
+'Wiring:
+'SDM-CD16 #1 (SDM address = 1)
+'Must be in mode "Auto" to be controlled by the datalogger
+'C1: C1 on CR1000
+'C2: C2 on CR1000
+'C3: C3 on CR1000
+'Logic GND: G (on power strip, not on datalogger) (ACTUALLY, CHECK MANUAL TO MAKE SURE HOW TO DO THIS)
+'Logic PWR: 12V (on power strip, not on datalogger)
+'Load PWR:  12V (on power strip, not on datalogger)
+'Ground besides Load PWR: G (on power strip, not on datalogger)
+
+'SDM-CD16 #2 (SDM address = 2)
+'Must be in mode "Auto" to be controlled by the datalogger
+'C1: C1 on CR1000
+'C2: C2 on CR1000
+'C3: C3 on CR1000
+'Logic GND: G (on power strip, not on datalogger) (ACTUALLY, CHECK MANUAL TO MAKE SURE HOW TO DO THIS)
+'Logic PWR: 12V (on power strip, not on datalogger)
+'Load PWR:  12V (on power strip, not on datalogger)
+'Ground besides Load PWR: G (on power strip, not on datalogger)
+
+'All solenoid valves:
+'OUT ODD: brown (open valve)
+'OUT EVEN: blue (close valve)
+'Ground: black
+
+'On SDM-CD16 #1:
+'OUT 1-2: profile height 1 (closest to top of tower, longest tube)
+'OUT 3-4: profile height 2
+'OUT 5-6: profile height 3
+'OUT 7-8: profile height 4
+'OUT 9-10: profile height 5
+'OUT 11-12: profile height 6
+'OUT 13-14: profile height 7
+'OUT 15-16: profile height 8 (closest to ground, shortest tube)
+'All solenoid valve are on the same manifold
+
+'On SDM-CD16 #2:
+'Out 1-2: eddy sampling
+'Out 3-4: eddy calibration
+'These two valves are on a separate manifold
+
+'Out 5-6: profile sampling
+'Out 7-8: profile calibration
+'These two valves are on another separate manifold
+
+'Out 9-10: Zero CO2
+'Out 11-12: High CO2
+'Out 13-14: Medium CO2
+'Out 15-16: Low CO2
+'These four valves are on a separate manifold
+
+
+
+
+'****************************
+'QUESTIONS:
+'-See section on MFCs and pump for more questions regarding them
+'-Make sure we use the right duration for each calibration step (right now it's 90 seconds)
+'-Create wiring schematics
+'****************************
+
+'*** Constants ***
+Const PROFILE_INTERVAL = 2 'Profile measurement interval (and other slow measurements), in seconds (2 = 0.5Hz)
+Const CAL_INTERVAL_EDDY = 21600 'Eddy calibration interval, in seconds (21600 = 6 hours)
+Const CAL_INTERVAL_PRFL = 28800 'Profile calibration interval, in seconds (28800 = 8 hours)
+Const ZERO_CAL_INTERVAL_EDDY = 7200 'Zero-CO2 eddy calibration interval, in seconds (7200 = 2 hours)
+Const ZERO_CAL_INTERVAL_PRFL = 14400 'Zero-CO2 profile calibration interval, in seconds (14400 = 4 hours)
+Const Cal_duration = 90 'Duration of each calibration (in seconds)
+Const PROFILE_CYCLE_LENGTH = 1080 'Duration of a complete profile cycle, in seconds (1080 = 18mins)
+Const PROFILE_HEIGHT_LENGTH = 135 'Duration of each profile height measurement period (in seconds)
+Const WarmScans = 5 'Number of scans to get a 5 second delay at start-up
+Const MFC_range = 200 'Full range of the mass flow controllers (in sccm; 200 = 0.2LPM)
+
+
+'** Port assignments **
+Const Pump_SE1_CH = 1 'SE channel on CR1000
+Const Pump_SE2_CH = 2 'SE channel on CR1000
+Const MFC_eddyB_SE1_CH = 3 'SE channel on CR1000
+Const MFC_eddyB_SE2_CH = 4 'SE channel on CR1000
+Const MFC_profile_SE1_CH = 5 'SE channel on CR1000
+Const MFC_profile_SE2_CH = 6 'SE channel on CR1000
+
+
+'*** Public variables ***
+Public i1
+Public CalCount
+Public CalCount_integral
+Public Mode '1=sampling, 2=calibration
+Public Mode_prfl '1=sampling, 2=calibration
+Public Mode_zero '1=sampling, 2=calibration
+Public Mode_zero_prfl '1=sampling, 2=calibration
+Public Cal_smp_eddy '0=sampling, 1=calibration
+Public Cal_smp_prfl '0=sampling, 1=calibration
+Public Mode_integral_prfl '1=one height measurement, 2=column integral
+Public WarmCount
+Public Calib_flag
+Public Calib_flag_prfl
+Public Flag(3) As Boolean '(1)=warmup done + measure eddy (2)=open valves for sampling both systems (3)=open valves for calibration
+Public Flag_prfl(3) As Boolean '(1)=can measure profile (3)=open valves for calibration
+Public Flag_zero As Boolean 'Open valves for zero-calibration
+Public Flag_zero_prfl As Boolean 'Open valves for zero-calibration
+Public Flag_integral_prfl As Boolean
+Public Flag_prfl_startup As Boolean 'First profile measurements after startup - measure colum integral instead of regular height
+Public Profile_height
+Public Profile_heights1
+Public Profile_heights2
+'Public Time_elapsed
+'Public Time_elapsed2
+
+
+Public batt_volt, panel_temp 'battery volt; panel temperature of CR1000
+Units batt_volt = V
+Units panel_temp = degC
+
+
+'Mass flow controllers
+Public MFC_eddyB_set_point_mV, MFC_eddyB_flow_mV
+Public MFC_profile_set_point_mV, MFC_profile_flow_mV
+Units MFC_eddyB_set_point_mV = mV
+Units MFC_eddyB_flow_mV = mV
+Units MFC_profile_set_point_mV = mV
+Units MFC_profile_flow_mV = mV
+Public MFC_eddyB_set_point_sccm, MFC_eddyB_flow_sccm
+Public MFC_profile_set_point_sccm, MFC_profile_flow_sccm
+Units MFC_eddyB_set_point_sccm = sccm
+Units MFC_eddyB_flow_sccm = sccm
+Units MFC_profile_set_point_sccm = sccm
+Units MFC_profile_flow_sccm = sccmV
+
+'N838 pump
+Public Pump_speed, Pump_tach
+Units Pump_speed = mV
+Units Pump_tach = mV
+
+
+Public SDMCD16_1(16) 'As Long
+'*** SDM Address = 1 ***
+Alias SDMCD16_1(1)=Profile_valve1_1 'First profile height (closest to top of tower)
+Alias SDMCD16_1(2)=Profile_valve1_2
+Alias SDMCD16_1(3)=Profile_valve2_1
+Alias SDMCD16_1(4)=Profile_valve2_2
+Alias SDMCD16_1(5)=Profile_valve3_1
+Alias SDMCD16_1(6)=Profile_valve3_2
+Alias SDMCD16_1(7)=Profile_valve4_1
+Alias SDMCD16_1(8)=Profile_valve4_2
+Alias SDMCD16_1(9)=Profile_valve5_1
+Alias SDMCD16_1(10)=Profile_valve5_2
+Alias SDMCD16_1(11)=Profile_valve6_1
+Alias SDMCD16_1(12)=Profile_valve6_2
+Alias SDMCD16_1(13)=Profile_valve7_1
+Alias SDMCD16_1(14)=Profile_valve7_2
+Alias SDMCD16_1(15)=Profile_valve8_1
+Alias SDMCD16_1(16)=Profile_valve8_2 'Last profile height (closest to ground)
+
+Public SDMCD16_2(16) 'As Long
+'*** SDM Address = 2 ***
+Alias SDMCD16_2(1)=Eddy_smp_1 'Eddy system sampling
+Alias SDMCD16_2(2)=Eddy_smp_2 'Eddy system sampling
+Alias SDMCD16_2(3)=Eddy_calib_1 'Eddy system calibration
+Alias SDMCD16_2(4)=Eddy_calib_2 'Eddy system calibration
+Alias SDMCD16_2(5)=Profile_smp_1 'Profile system sampling
+Alias SDMCD16_2(6)=Profile_smp_2 'Profile system sampling
+Alias SDMCD16_2(7)=Profile_calib_1 'Profile system calibration
+Alias SDMCD16_2(8)=Profile_calib_2 'Profile system calibration
+Alias SDMCD16_2(9)=Calib_ZeroCO2_1 'Zero-CO2
+Alias SDMCD16_2(10)=Calib_ZeroCO2_2 'Zero-CO2
+Alias SDMCD16_2(11)=Calib_HighCO2_1 'High-CO2
+Alias SDMCD16_2(12)=Calib_HighCO2_2 'High-CO2
+Alias SDMCD16_2(13)=Calib_MedCO2_1 'Medium-CO2
+Alias SDMCD16_2(14)=Calib_MedCO2_2 'Medium-CO2
+Alias SDMCD16_2(15)=Calib_LowCO2_1 'Low-CO2
+Alias SDMCD16_2(16)=Calib_LowCO2_2 'Low-CO2
+
+
+
+'************************
+'Define Data Tables
+'************************
+DataTable (Flags_data,1,-1)
+  DataInterval (0,PROFILE_INTERVAL,Sec,-1)
+  CardOut(0,-1)
+  Sample(1,batt_volt,FP2)
+  Sample(1,panel_temp,FP2)
+  Sample(1,Cal_smp_eddy,FP2) '0=sample; 1=calib
+  Sample(1,Calib_flag,IEEE4) '10000=zero; 10=high; 100=med; 1000=low; 0=sample
+  Sample(1,Cal_smp_prfl,FP2) '0=sample; 1=calib
+  Sample(1,Calib_flag_prfl,IEEE4) '10000=zero; 10=high; 100=med; 1000=low; 0=sample
+  Sample(1,Profile_heights1,FP2) '1000=1; 100=2; 10=3; 1=4 (1 is at top of tower)
+  Sample(1,Profile_heights2,FP2) '1000=5; 100=6; 10=7; 1=8 (8 is at base of tower)
+  Sample(1,Profile_height,FP2) '1 to 8
+  Sample(1,MFC_eddyB_flow_sccm,FP2) 'Flow rate in LI-7000 cell B
+  Sample(1,MFC_profile_flow_sccm,FP2) 'Flow rate in LI-840 cell
+  Sample(1,Pump_speed,FP2)
+  Sample(1,Pump_tach,FP2)
+EndTable
+
+DataTable (Valves_1sec,1,-1)
+  DataInterval (0,1,Sec,-1)
+	CardOut(0,-1)
+  Sample(16,SDMCD16_1,FP2) 'FOR TEST PURPOSES
+  Sample(16,SDMCD16_2,FP2) 'FOR TEST PURPOSES
+EndTable
+
+
+
+'************************
+'Subroutines
+'************************
+
+'***********
+'Calibration routine for eddy covariance system (i.e., LI-7000)
+'***********
+Sub Calibration_eddy
+  Calib_flag=0
+  If  TimeIntoInterval(0,CAL_INTERVAL_EDDY,2) Then 'The 2nd input is the time between each calibration, in minutes
+    Mode = 2 'Mode = 2: calibration  Mode = 1: regular measurements
+  EndIf
+  If (Mode = 2) Then
+    If  Flag(3) = False Then
+      Eddy_calib_1 = 1 'Open valve for eddy system calibration
+      Eddy_smp_2 = 1 'Close valve for eddy system sampling
+      Calib_ZeroCO2_1 = 1 'Open valve for zero CO2 calibration
+      SDMCD16AC(SDMCD16_2,1,2)
+'      Timer(2,mSec,0)
+
+      CalCount = 0
+      Flag(3) = True
+    EndIf
+    If  Flag(3) = True Then
+      CalCount = CalCount + 1 'CalCount is in seconds, but this subroutine runs at 10Hz so increase CalCount by 0.1sec after each cycle
+      If (CalCount = Cal_duration) Then 'End of the first, zero-CO2 calibration (in seconds), beginning of high-CO2
+        Calib_ZeroCO2_2 = 1 'Stop zero-CO2 gas flow
+        Calib_HighCO2_1 = 1 'Open valve for high CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+      EndIf
+      If (CalCount = Cal_duration*2) Then 'End of the second, high-CO2 calibration (in seconds), beginning of medium-CO2
+        Calib_HighCO2_2 = 1 'Stop high-CO2 gas flow
+        Calib_MedCO2_1 = 1 'Open valve for medium CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+      EndIf
+      If (CalCount = Cal_duration*3) Then 'End of the third, medium-CO2 calibration (in seconds), beginning of low-CO2
+        Calib_MedCO2_2 = 1 'Stop medium-CO2 gas flow
+        Calib_LowCO2_1 = 1 'Open valve for low-CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+      EndIf
+      If (CalCount = Cal_duration*4) Then 'End of the fourth, low-CO2 calibration (in seconds); go back to regular sampling
+        Eddy_smp_1 = 1 'Open valve for eddy system sampling
+        Eddy_calib_2 = 1 'Close valve for eddy system calibration
+        Calib_LowCO2_2 = 1 'Stop low-CO2 gas flow
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+        
+        Flag(3) = False
+        Mode = 1 'Mode = 2: calibration  Mode = 1: regular measurements (This is the end of the calibration if there is no surveillance tank run)
+      EndIf
+    EndIf
+  'Calibration flag
+  If (CalCount>=1 AND CalCount<=Cal_duration) Then
+    Calib_flag=10000 '1 'Zero-CO2 calibration
+  ElseIf (CalCount>=Cal_duration+1 AND CalCount<=Cal_duration*2) Then
+    Calib_flag=10 '2 'High-CO2 calibration
+  ElseIf (CalCount>=Cal_duration*2+1 AND CalCount<=Cal_duration*3) Then
+    Calib_flag=100 '3 'Medium-CO2 calibration
+  ElseIf (CalCount>=Cal_duration*3+1 AND CalCount<=Cal_duration*4) Then
+    Calib_flag=1000 '4 'Low-CO2 calibration
+  Else
+    Calib_flag=0 'Regular measurements
+  EndIf
+EndIf
+EndSub
+
+
+'***********
+'Calibration routine for profile system (i.e., LI-840)
+'***********
+Sub Calibration_prfl
+  If TimeIntoInterval(3420,CAL_INTERVAL_PRFL,2) Then 'Calibrate profile 57 minutes into the interval so it doesn't run at 
+                            'the same time as the eddy covariance system calibration at midnight. Also, it will run for 6 minutes centered 
+                            'on the hour (e.g. from 0:57 to 1:03), or right after its first calibration after power up.
+    Mode_prfl = 2 'Mode_prfl = 2: calibration  Mode_prfl = 1: regular measurements
+  EndIf
+  If (Mode_prfl = 2) Then
+    If  Flag_prfl(3) = False Then
+      Profile_calib_1 = 1 'Open valve for profile system calibration
+      Profile_smp_2 = 1 'Close valve for profile system sampling
+      Calib_ZeroCO2_1 = 1 'Open valve for zero-CO2 calibration
+      SDMCD16AC(SDMCD16_2,1,2)
+'      Timer(2,mSec,0)
+
+      CalCount = 0
+      Flag_prfl(3) = True
+    EndIf
+    If  Flag_prfl(3) = True Then
+      CalCount = CalCount + 1 'CalCount is in seconds, but this subroutine runs at 1Hz so increase CalCount by 1sec after each cycle
+      If (CalCount = Cal_duration) Then 'End of the first, zero-CO2 calibration (in seconds); beginning of high-CO2
+        Calib_ZeroCO2_2 = 1 'Stop zero-CO2 gas flow
+        Calib_HighCO2_1 = 1 'Open valve for high-CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+      EndIf
+      If (CalCount = Cal_duration*2) Then 'End of the second, high-CO2 calibration (in seconds); beginning of medium-CO2
+        Calib_HighCO2_2 = 1 'Stop high-CO2 gas flow
+        Calib_MedCO2_1 = 1 'Open valve for medium-CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+      EndIf
+      If (CalCount = Cal_duration*3) Then 'End of the third, medium-CO2 calibration (in seconds); beginning of low-CO2
+        Calib_MedCO2_2 = 1 'Stop medium-CO2 gas flow
+        Calib_LowCO2_1 = 1 'Open valve for low-CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+      EndIf
+      If (CalCount = Cal_duration*4) Then 'End of the fourth, low-CO2 calibration (in seconds); go back to regular sampling
+        Calib_LowCO2_2 = 1 'Stop low-CO2 gas flow
+        Profile_smp_1 = 1 'Open valve for profile system sampling
+        Profile_calib_2 = 1 'Close valve for profile system calibration
+'        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+
+        Flag_prfl(3) = False
+        Mode_prfl = 1 'Mode_prfl = 2: calibration  Mode_prfl = 1: regular measurements
+      EndIf
+    EndIf
+    'Calibration flag
+    If (CalCount>=1 AND CalCount<=Cal_duration) Then
+      Calib_flag_prfl=10000 '1 'Zero-CO2 calibration
+    ElseIf (CalCount>=Cal_duration+1 AND CalCount<=Cal_duration*2) Then
+      Calib_flag_prfl=10 '2 'High-CO2 calibration
+    ElseIf (CalCount>=Cal_duration*2+1 AND CalCount<=Cal_duration*3) Then
+      Calib_flag_prfl=100 '3 'Medium-CO2 calibration
+    ElseIf (CalCount>=Cal_duration*3+1 AND CalCount<=Cal_duration*4) Then
+      Calib_flag_prfl=1000 '4 'Low-CO2 calibration
+    Else
+      Calib_flag_prfl=0 'Regular measurements
+    EndIf
+  EndIf
+EndSub
+
+
+'***********
+'Zero-CO2 calibration routine - eddy system
+'***********
+Sub ZeroCalibration_eddy
+  If (TimeIntoInterval(0,ZERO_CAL_INTERVAL_EDDY,2) AND NOT TimeIntoInterval(0,CAL_INTERVAL_EDDY,2)) Then 'Do eddy system zero-calibration subroutine for 
+    '90 seconds at the beginning of the interval (only when there is not a full calibration at the same time)
+    Mode_zero = 2
+  EndIf
+  If Mode_zero = 2 Then
+    If Flag_zero = False Then
+      Eddy_calib_1 = 1 'Open valve for eddy system calibration
+      Eddy_smp_2 = 1 'Close valve for eddy system sampling
+      Calib_ZeroCO2_1 = 1 'Open valve for zero-CO2 calibration
+      SDMCD16AC(SDMCD16_2,1,2)
+'      Timer(2,mSec,0)
+      
+      Flag_zero = True
+      CalCount = 0
+    EndIf
+    If Flag_zero = True Then
+      CalCount = CalCount + 1
+      If (CalCount = Cal_duration) Then 'End of the zero-CO2 calibration; go back to regular sampling
+        Eddy_calib_2 = 1 'Close valve for eddy system calibration
+        Eddy_smp_1 = 1 'Open valve for eddy system sampling
+        Calib_ZeroCO2_2 = 1 'Close valve for zero-CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+        
+        Flag_zero = False
+        Mode_zero = 1
+      EndIf
+    EndIf
+    'Calibration flag
+    If (CalCount>=1 AND CalCount<=Cal_duration) Then
+      Calib_flag=10000 '1 'Zero-CO2 calibration
+    Else
+      Calib_flag=0 'Regular measurements
+    EndIf
+  EndIf
+EndSub
+
+
+'***********
+'Zero-CO2 calibration routine - profile system
+'***********
+Sub ZeroCalibration_prfl
+  If (TimeIntoInterval(3420,ZERO_CAL_INTERVAL_PRFL,2) AND NOT TimeIntoInterval(3420,CAL_INTERVAL_PRFL,2)) Then 'Do profile system zero-calibration subroutine. 
+    '(only when there is not a full calibration at the same time) As with the regular calibration, offset it by 1hour so it doesn't happen at the same 
+    'time as the eddy system calibration. During the usual 6-minute interval, the first 90 seconds are a zero-calibration and
+    'the remaining time is a height 8 measurement to minimize strain on pump.
+    Mode_zero_prfl = 2
+  EndIf
+  If Mode_zero_prfl = 2 Then
+    If Flag_zero_prfl = False Then
+      Profile_calib_1 = 1 'Open valve for profile system calibration
+      Profile_smp_2 = 1 'Close valve for profile system sampling
+      Calib_ZeroCO2_1 = 1 'Open valve for zero-CO2 calibration
+      SDMCD16AC(SDMCD16_2,1,2)
+'      Timer(2,mSec,0)
+        
+      Flag_zero_prfl = True
+      CalCount = 0
+    EndIf
+    If Flag_zero_prfl = True Then
+      CalCount = CalCount + 1
+      If (CalCount = Cal_duration) Then 'End of the zero-CO2 calibration; beginning of height 8 measurement (we don't do the column integral measurement anymore).
+                                        'We use height eight since it has the shortest inlet tube, so we minimize the strain on the pump
+        Profile_calib_2 = 1 'Close valve for profile system calibration
+        Profile_smp_1 = 1 'Open valve for profile system sampling
+        Calib_ZeroCO2_2 = 1 'Close valve for zero-CO2 calibration
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+        Profile_heights1 = 0
+        Profile_heights2 = 1 'Valve 8 is already open
+        Profile_height = 8
+      EndIf  
+      
+      If (CalCount = Cal_duration*4) Then 'Back to regular measurements
+        Flag_zero_prfl = False
+        Mode_zero_prfl = 1
+      EndIf
+    EndIf
+    'Calibration flag
+    If (CalCount>=1 AND CalCount<=Cal_duration) Then
+      Calib_flag_prfl=10000 '1 'Zero-CO2 calibration
+    Else
+      Calib_flag_prfl=0 'Regular measurements
+    EndIf
+  EndIf
+EndSub
+
+
+'***********
+'Profile height 8 measurement routine
+'***********
+Sub Height8_prfl
+  If (TimeIntoInterval(3420,3600,2) AND NOT TimeIntoInterval(3420,ZERO_CAL_INTERVAL_PRFL,2)) Then 
+  'We don't do profile system column integral measurement anymore; we only run air through the shortest tube (height 8) to minimize strain on the pump. 
+  'Happens every hour, centered on the hour, when no full calibration or zero-calibration is set to occur.
+    Mode_integral_prfl = 2
+  EndIf
+  If Mode_integral_prfl = 2 Then
+    If Flag_integral_prfl = False Then
+'      Profile_valve1_1 = 1 'Open valve for profile height 1
+'      SDMCD16AC(SDMCD16_1,1,1)
+'      Timer(1,mSec,0)
+      Profile_heights1 = 0
+      Profile_heights2 = 1 'Valve 8 is already open
+      Profile_height = 8
+
+      Flag_integral_prfl = True
+      CalCount_integral = 0
+    EndIf
+    If Flag_integral_prfl = True Then
+      If (CalCount_integral = Cal_duration*4) Then 'Back to regular measurements (valve 1 will be sampled next)
+        Flag_integral_prfl = False
+        Mode_integral_prfl = 1
+      EndIf
+    EndIf
+    CalCount_integral = CalCount_integral + 1
+  EndIf
+EndSub
+  
+  
+  
+'***********
+'Subroutine to close the proper valves after startup column integral, right before measuring the first specific height
+'***********
+Sub Prfl_startup_end(Profile_height)
+  If Flag_prfl_startup = True Then
+    If Profile_height = 1 Then
+      Profile_valve2_2 = 1 'Close valves
+      Profile_valve3_2 = 1 
+      Profile_valve4_2 = 1 
+      Profile_valve5_2 = 1 
+      Profile_valve6_2 = 1 
+      Profile_valve7_2 = 1 
+      Profile_valve8_2 = 1 
+    ElseIf Profile_height = 2 Then
+      Profile_valve1_2 = 1 
+      Profile_valve3_2 = 1 
+      Profile_valve4_2 = 1 
+      Profile_valve5_2 = 1 
+      Profile_valve6_2 = 1 
+      Profile_valve7_2 = 1 
+      Profile_valve8_2 = 1 
+    ElseIf Profile_height = 3 Then
+      Profile_valve1_2 = 1 
+      Profile_valve2_2 = 1 
+      Profile_valve4_2 = 1 
+      Profile_valve5_2 = 1 
+      Profile_valve6_2 = 1 
+      Profile_valve7_2 = 1 
+      Profile_valve8_2 = 1 
+    ElseIf Profile_height = 4 Then
+      Profile_valve1_2 = 1 
+      Profile_valve2_2 = 1 
+      Profile_valve3_2 = 1 
+      Profile_valve5_2 = 1 
+      Profile_valve6_2 = 1 
+      Profile_valve7_2 = 1 
+      Profile_valve8_2 = 1 
+    ElseIf Profile_height = 5 Then
+      Profile_valve1_2 = 1 
+      Profile_valve2_2 = 1 
+      Profile_valve3_2 = 1 
+      Profile_valve4_2 = 1 
+      Profile_valve6_2 = 1 
+      Profile_valve7_2 = 1 
+      Profile_valve8_2 = 1 
+    ElseIf Profile_height = 6 Then
+      Profile_valve1_2 = 1 
+      Profile_valve2_2 = 1 
+      Profile_valve3_2 = 1 
+      Profile_valve4_2 = 1 
+      Profile_valve5_2 = 1 
+      Profile_valve7_2 = 1 
+      Profile_valve8_2 = 1 
+    ElseIf Profile_height = 7 Then
+      Profile_valve1_2 = 1 
+      Profile_valve2_2 = 1 
+      Profile_valve3_2 = 1 
+      Profile_valve4_2 = 1 
+      Profile_valve5_2 = 1 
+      Profile_valve6_2 = 1 
+      Profile_valve8_2 = 1 
+    ElseIf Profile_height = 8 Then
+      Profile_valve1_2 = 1 
+      Profile_valve2_2 = 1 
+      Profile_valve3_2 = 1 
+      Profile_valve4_2 = 1 
+      Profile_valve5_2 = 1 
+      Profile_valve6_2 = 1 
+      Profile_valve7_2 = 1 
+    EndIf        
+    SDMCD16AC(SDMCD16_1,1,1)
+    Flag_prfl_startup = False
+'    Delay(1,15,mSec)
+  EndIf
+EndSub        
+  
+  
+  
+
+'************************
+'Main Program
+'************************
+BeginProg
+  Scan(1,Sec,0,0) 'Measurement frequency, in sec, for valve switching
+    If  Flag(1) = False Then
+      If  Flag(2) = False Then
+        'Open the valves we want on power up, and close the other ones
+        Eddy_smp_1 = 1 'Open valve for eddy system sampling
+        Profile_smp_1 = 1 'Open valve for profile system sampling
+        'Close other valves
+        Eddy_calib_2 = 1
+        Profile_calib_2 = 1
+        Calib_ZeroCO2_2 = 1
+        Calib_HighCO2_2 = 1
+        Calib_MedCO2_2 = 1
+        Calib_LowCO2_2 = 1        
+        SDMCD16AC(SDMCD16_2,1,2)
+'        Timer(2,mSec,0)
+        'Open valves for all profile heights
+        Profile_valve1_1 = 1
+        Profile_valve2_1 = 1
+        Profile_valve3_1 = 1
+        Profile_valve4_1 = 1
+        Profile_valve5_1 = 1
+        Profile_valve6_1 = 1
+        Profile_valve7_1 = 1
+        Profile_valve8_1 = 1
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+        Profile_heights1 = 1000 'No actual measurements yet
+        Profile_heights2 = 0
+        Profile_height = 0 'No actual measurements yet
+        Flag_prfl_startup = True
+        Flag(2) = True
+      EndIf
+      If (WarmCount >= WarmScans) Then '5 second delay when the datalogger is fired up to give everything a chance to come online
+'        Mode = 2 'Mode = 2: calibration  Mode = 1: regular measurements - do calibration right after everything is powered up
+        Mode_prfl = 1 'Mode_prfl = 2: calibration  Mode_prfl = 1: regular measurements - start regular measurements while eddy system is being calibrated
+        Flag(1) = True
+        Flag_prfl(1) = True
+      EndIf
+      WarmCount = WarmCount + 1
+    EndIf
+    
+'    'Warmup done - start measurements
+'    If  Flag(1) = True Then
+'      
+'      
+'      
+'      
+'      
+'      'Measure LI-7000 IRGA
+'      '      VoltDiff(Pressure, 1,mV5000, 1, True, 0, 250, 1, 0)
+'      '      VoltDiff(Flow, 1,mV5000, 2, True, 0, 250, 1, 0)
+'      '      VoltDiff(CO2_mV, 1,mV5000, 3, True, 0, 250, 1, 0)
+'      '      VoltDiff(Tcell_mV, 1,mV5000, 4, True, 0, 250, 1, 0)
+'      '      VoltDiff(H2O_mV, 1,mV5000, 5, True, 0, 250, 1, 0)
+'
+''      Calibration_eddy 'Do eddy system calibration subroutine
+''      ZeroCalibration_eddy 'Do eddy system zero calibration subroutine
+'    EndIf
+
+
+    
+ ' NextScan
+
+  '******
+  'Cycle through profile heights
+  'Right now there are 3 18-minute cycles per hour + 1 6-minute cycle for calibration, zero calibration or column integral measurement - modify if needed
+'  SlowSequence
+'    Scan(1,Sec,0,0)
+      Calib_flag_prfl=0
+      If (TimeIntoInterval(180,3600,2) OR TimeIntoInterval(1260,3600,2)) Then 'Turn valves on/off to select to right profile height to measure
+        'Good for 2 out of 3 cycles only, otherwise the expression is too long and the program won't compile. The 3rd cycle is dealt with later.
+        Profile_heights1 = 1000
+        Profile_heights2 = 0
+        Profile_height = 1
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve1_1 = 1 'Open valve for height 1
+        Profile_valve8_2 = 1 'Close valve for height 8
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf (TimeIntoInterval(315,3600,2) OR TimeIntoInterval(1395,3600,2)) Then
+        Profile_heights1 = 100
+        Profile_heights2 = 0
+        Profile_height = 2
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve1_2 = 1 'Close valve for height 1
+        Profile_valve2_1 = 1 'Open valve for height 2
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf (TimeIntoInterval(450,3600,2) OR TimeIntoInterval(1530,3600,2)) Then
+        Profile_heights1 = 10
+        Profile_heights2 = 0
+        Profile_height = 3
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve2_2 = 1 'Close valve for height 2
+        Profile_valve3_1 = 1 'Open valve for height 3
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf (TimeIntoInterval(585,3600,2) OR TimeIntoInterval(1665,3600,2)) Then
+        Profile_heights1 = 1
+        Profile_heights2 = 0
+        Profile_height = 4
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve3_2 = 1 'Close valve for height 3
+        Profile_valve4_1 = 1 'Open valve for height 4
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf (TimeIntoInterval(720,3600,2) OR TimeIntoInterval(1800,3600,2)) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 1000
+        Profile_height = 5
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve4_2 = 1 'Close valve for height 4
+        Profile_valve5_1 = 1 'Open valve for height 5
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf (TimeIntoInterval(855,3600,2) OR TimeIntoInterval(1935,3600,2)) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 100
+        Profile_height = 6
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve5_2 = 1 'Close valve for height 5
+        Profile_valve6_1 = 1 'Open valve for height 6
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf (TimeIntoInterval(990,3600,2) OR TimeIntoInterval(2070,3600,2)) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 10
+        Profile_height = 7
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve6_2 = 1 'Close valve for height 6
+        Profile_valve7_1 = 1 'Open valve for height 7
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf (TimeIntoInterval(1125,3600,2) OR TimeIntoInterval(2205,3600,2)) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 1
+        Profile_height = 8
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve7_2 = 1 'Close valve for height 7
+        Profile_valve8_1 = 1 'Open valve for height 8
+        SDMCD16AC(SDMCD16_1,1,1)
+ '       Timer(1,mSec,0)
+        
+      '3rd profile cycle.
+      ElseIf TimeIntoInterval(2340,3600,2) Then
+        Profile_heights1 = 1000
+        Profile_heights2 = 0
+        Profile_height = 1
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve1_1 = 1 'Open valve for height 1
+        Profile_valve8_2 = 1 'Close valve for height 8
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf TimeIntoInterval(2475,3600,2) Then
+        Profile_heights1 = 100
+        Profile_heights2 = 0
+        Profile_height = 2
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve1_2 = 1 'Close valve for height 1
+        Profile_valve2_1 = 1 'Open valve for height 2
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf TimeIntoInterval(2610,3600,2) Then
+        Profile_heights1 = 10
+        Profile_heights2 = 0
+        Profile_height = 3
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve2_2 = 1 'Close valve for height 2
+        Profile_valve3_1 = 1 'Open valve for height 3
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf TimeIntoInterval(2745,3600,2) Then
+        Profile_heights1 = 1
+        Profile_heights2 = 0
+        Profile_height = 4
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve3_2 = 1 'Close valve for height 3
+        Profile_valve4_1 = 1 'Open valve for height 4
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf TimeIntoInterval(2880,3600,2) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 1000
+        Profile_height = 5
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve4_2 = 1 'Close valve for height 4
+        Profile_valve5_1 = 1 'Open valve for height 5
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf TimeIntoInterval(3015,3600,2) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 100
+        Profile_height = 6
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve5_2 = 1 'Close valve for height 5
+        Profile_valve6_1 = 1 'Open valve for height 6
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf TimeIntoInterval(3150,3600,2) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 10
+        Profile_height = 7
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve6_2 = 1 'Close valve for height 6
+        Profile_valve7_1 = 1 'Open valve for height 7
+        SDMCD16AC(SDMCD16_1,1,1)
+'        Timer(1,mSec,0)
+      ElseIf TimeIntoInterval(3285,3600,2) Then
+        Profile_heights1 = 0
+        Profile_heights2 = 1
+        Profile_height = 8
+        Prfl_startup_end(Profile_height) 'Call subroutine
+        Profile_valve7_2 = 1 'Close valve for height 7
+        Profile_valve8_1 = 1 'Open valve for height 8
+        SDMCD16AC(SDMCD16_1,1,1)
+ '       Timer(1,mSec,0)
+      EndIf
+      
+      'Profile: Open/close valves to do calibrations or column integral measurements
+      Calibration_prfl 'Do profile system calibration subroutine
+      ZeroCalibration_prfl 'Do profile system zero calibration subroutine
+      Height8_prfl 'Do profile column integral measurement subroutine (when no calibration or zero is occuring during a given hour)
+
+      'Eddy: Open/close valves to do calibrations
+      Calibration_eddy 'Do eddy system calibration subroutine
+      ZeroCalibration_eddy 'Do eddy system zero calibration subroutine
+      
+      CallTable Valves_1sec
+
+      
+'    Time_elapsed = Timer(1,mSec,4) 'Read timer #1 (profile height valves)
+'    If Time_elapsed>=50 Then
+      For i1 = 1 To 16
+          SDMCD16_1(i1) = 0 'Make sure all ports are deactivated
+          SDMCD16_2(i1) = 0 'Make sure all ports are deactivated
+      Next i1
+      Delay(2,25,mSec)
+      SDMCD16AC(SDMCD16_1,1,1)
+'      Timer(1,mSec,3) 'Stop and reset timer #1
+'    EndIf
+'
+
+'    Time_elapsed2 = Timer(2,mSec,4) 'Read timer #2 (sampling/calibration valves)
+'    If Time_elapsed2>=50 Then
+'      For i1 = 1 To 16
+'          SDMCD16_2(i1) = 0 'Make sure all ports are deactivated
+'      Next i1
+      SDMCD16AC(SDMCD16_2,1,2)
+'      Timer(2,mSec,3) 'Stop and reset timer #2
+'    EndIf
+    
+    NextScan
+'  EndSequence
+      
+      
+  'Measure meteorological sensors, profile, MFCs, etc.    
+  SlowSequence
+    Scan (PROFILE_INTERVAL,Sec,0,0) 'Measurement frequency, in sec, for the profile system and other slow measurements
+'      If  Flag_prfl(1) = True Then 'System is powered up and WarmCount done
+'        'Measure LI-840 IRGA
+'        '      VoltDiff(Pressure, 1,mV5000, 1, True, 0, 250, 1, 0)
+'        '      VoltDiff(Flow, 1,mV5000, 2, True, 0, 250, 1, 0)
+'        '      VoltDiff(CO2_mV, 1,mV5000, 3, True, 0, 250, 1, 0)
+'        '      VoltDiff(Tcell_mV, 1,mV5000, 4, True, 0, 250, 1, 0)
+'        '      VoltDiff(H2O_mV, 1,mV5000, 5, True, 0, 250, 1, 0)
+'  
+'      EndIf
+      
+      'Measure mass flow controllers (MFCs).
+      VoltSe(MFC_eddyB_set_point_mV,1,mV5000,MFC_eddyB_SE1_CH,1,0,_50Hz,1.0,0)
+      VoltSe(MFC_eddyB_flow_mV,1,mV5000,MFC_eddyB_SE2_CH,1,0,_50Hz,1.0,0)
+      VoltSe(MFC_profile_set_point_mV,1,mV5000,MFC_profile_SE1_CH,1,0,_50Hz,1.0,0)
+      VoltSe(MFC_profile_flow_mV,1,mV5000,MFC_profile_SE2_CH,1,0,_50Hz,1.0,0) 
+      'Convert mV to sccm
+      MFC_eddyB_set_point_sccm = MFC_eddyB_set_point_mV*MFC_range/5000
+      MFC_eddyB_flow_sccm = MFC_eddyB_flow_mV*MFC_range/5000
+      MFC_profile_set_point_sccm = MFC_profile_set_point_mV*MFC_range/5000
+      MFC_profile_flow_sccm = MFC_profile_flow_mV*MFC_range/5000
+      
+      'Measure N838 pump
+      VoltSe(Pump_speed,1,mV5000,Pump_SE1_CH,1,0,_50Hz,1.0,0)
+      VoltSe(Pump_tach,1,mV5000,Pump_SE2_CH,1,0,_50Hz,1.0,0)
+              
+      'Measure panel temperature
+      PanelTemp(panel_temp,250)
+  	 	
+  	 	'Measure battery voltage
+  	 	Battery(batt_volt)
+  	 	
+  	 	'Merge calibration flags
+  	 	If (Mode = 2 OR Mode_zero = 2) Then
+  	 	  Cal_smp_eddy = 1
+  	 	Else
+  	 	  Cal_smp_eddy = 0
+  	 	EndIf
+  	 	
+  	 	If (Mode_prfl = 2 OR Mode_zero_prfl = 2) Then
+  	 	  Cal_smp_prfl = 1
+  	 	Else
+  	 	  Cal_smp_prfl = 0
+  	 	EndIf
+  	 	  
+      CallTable Flags_data
+    NextScan
+  EndSequence
+EndProg
+

@@ -1,0 +1,53 @@
+'CR1000 Series Datalogger
+'To create a different opening program template, type in new
+'instructions and select Template | Save as Default Template
+'date:
+'program author:
+
+SequentialMode
+
+'Declare Public Variables
+'Example:
+Public PTemp, batt_volt
+Public CD16_out As Long
+
+'Declare Other Variables
+'Example:
+'Dim Counter
+
+'Declare Constants
+'Example:
+'CONST PI = 3.141592654	
+
+'Define Data Tables
+DataTable (Data,1,-1)
+	DataInterval (0,15,Sec,-1)
+	Minimum (1,batt_volt,FP2,0,False)
+	Sample (1,PTemp,FP2)
+EndTable
+
+'Define Subroutines
+'Sub
+	'EnterSub instructions here
+'EndSub
+
+'Main Program
+BeginProg
+	Scan (5,Sec,0,0)
+		PanelTemp (PTemp,250)
+		Battery (Batt_volt)
+		CD16_out = 1
+		SDMCD16AC (CD16_out,1,0)
+		Delay (2,15,mSec)
+		CD16_out = 0
+		SDMCD16AC (CD16_out,1,0)
+		Delay (1,3,Sec)
+		CD16_out = 2
+		SDMCD16AC (CD16_out,1,0)
+		Delay (2,15,mSec)
+		CD16_out = 0
+		SDMCD16AC (CD16_out,1,0)
+		CallTable Data
+	NextScan
+EndProg
+

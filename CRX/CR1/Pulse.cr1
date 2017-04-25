@@ -1,0 +1,28 @@
+
+
+Public wind_speed
+Units wind_speed = Hz
+
+Public wind_speed2
+Units wind_speed2 = Hz  
+'Online stats data.
+DataTable (stats,TRUE,-1)
+  DataInterval (0,1,Min,10)
+  Average(1,wind_speed,IEEE4,False)
+  Average(1,wind_speed2,IEEE4,False)
+EndTable
+
+
+BeginProg 
+ 'Set the SDM clock speed.
+  Scan (10,Sec,3,0)
+    PulseCount(wind_speed,1,1,0,1,1,0)    
+    PulseCount(wind_speed2,1,2,0,0,1.0,0)  
+    CallTable (stats)
+  NextScan
+EndProg
+
+
+
+
+

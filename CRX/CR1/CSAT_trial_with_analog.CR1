@@ -1,0 +1,97 @@
+'15 January 2010, attempt by Jan Ng
+'21 January 2010, confirmed as usable!
+'Instrument: CSAT-3
+
+PipeLineMode
+
+
+'*** Constants ***
+
+
+'Measurement Rate				        '10 Hz
+Const SCAN_INTERVAL = 100			  '100 mSec
+
+'Output period
+Const OUTPUT_INTERVAL = 1			  'Online flux data output interval in minutes
+
+Const CSAT3_AZIMUTH = 0				   'Unique value.
+
+Const CSAT_OPT = INT (1000/SCAN_INTERVAL) 	'Compute CSAT3 Execution Parameter
+
+Const SDM_PER = 30 				'Default SDM clock speed.
+
+
+'*** Variables ***
+
+
+'Online lagged CSAT3 data.
+Public wind(5)
+Alias wind(1) = Ux
+Alias wind(2) = Uy
+Alias wind(3) = Uz
+Alias wind(4) = Ts
+Alias wind(5) = diag_csat
+
+Public analog(4)
+Alias analog(1) = Ax
+Alias analog(2) = Ay
+Alias analog(3) = Az
+Alias analog(4) = Ta
+
+Units Ux = m/s
+Units Uy = m/s
+Units Uz = m/s
+Units Ts = C
+Units diag_csat = unitless
+
+'CRBasic datalogger battery voltage
+Public batt_volt 
+Public panel_temp
+
+Units batt_volt = V
+Units panel_temp = C
+
+'Number of samples in the online stats
+Dim n 
+
+Units n = samples
+
+
+'*** Final Output Data Tables ***
+
+
+'Raw Data Table
+DataTable (raw_data,TRUE,-1)
+  DataInterval (0,OUTPUT_INTERVAL,Min,0)
+	Sample (1,Ux,IEEE4)
+	Sample (1,Uy,IEEE4)
+	Sample (1,Uz,IEEE4)
+	Sample (1,Ts,IEEE4)
+	Sample (1,diag_csat,IEEE4)
+EndTable
+
+
+'*** Program ***
+
+
+BeginProg
+
+	Move (Ux,5,NaN,1)   			'Set all CSAT3 variables to NaN.
+
+	SDMSpeed (SDM_PER)  			'Set the SDM clock speed.
+
+	Scan (SCAN_INTERVAL,mSec,3,0)
+
+		PanelTemp (panel_temp,250)    	'CRBasic datalogger panel temperature.
+
+		CSAT3 (Ux,1,3,91,CSAT_OPT)   	'Get CSAT3 wind and sonic temperature data.
+
+		Battery (batt_volt)    		'Measure battery voltage.
+		VoltDiff (Ax,4,mV5000,1,True ,0,250,1.0,0)
+		
+
+		CallTable (raw_data)
+
+	NextScan
+
+EndProg

@@ -1,0 +1,123 @@
+'Data Logger: CR1000
+
+'I don't think PipeLineMode is an option for us because we need conditional execution
+'PipeLineMode
+
+'*** Constants ***
+Const SCAN_INTERVAL_EC = 100			  '100 mSec=10Hz, eddy covariance
+Const SCAN_INTERVAL_NON_EC = 10        'measurement interval in seconds for other instruments
+Const OUTPUT_INTERVAL_NON_EC = 1      'output interval in minutes for other instruments
+
+'** Port assignments **
+' Not sure if it's possible to use constants for excitation channels
+Const REL_HUM_SE_CH = 1
+Const WIND_SE_CH = 2
+Const T_DIFF_CH = 2
+Const TOT_RAD_SE_CH = 7
+Const DIF_RAD_SE_CH = 8
+Const MUX_DIFF_CH = 5
+Const CNR1_T_DIFF_CH = 6
+Const RAIN_PULSE_CH = 1
+Const WIND_PULSE_CH = 2
+Const MUX_RST = 4
+Const MUX_CLK = 5
+
+'*** Variables ***
+Public rain
+Units rain = tips
+
+Public rel_hum, Rs_Ro, T
+Units rel_hum = mV
+Units T = C
+
+Public wind_speed, wind_dir
+Units wind_speed = pulses
+Units wind_dir = ratio
+
+Public cnr1_temp
+Units cnr1_temp = C
+
+Public cnr1(4)
+Alias cnr1(1) = cm3_up
+Alias cnr1(2) = cg3_up
+Alias cnr1(3) = cm3_down
+Alias cnr1(4) = cg3_down
+Units cm3_up = mV
+Units cg3_up = mV
+Units cm3_down = mV
+Units cg3_down = mV
+
+Public par(2)
+Alias par(1) = par_up
+Alias par(2) = par_down
+
+Public tot_rad, dif_rad
+Units tot_rad = mV
+Units dif_rad = mV
+
+Public batt_volt, panel_temp
+Units batt_volt = V
+Units panel_temp = C
+
+' Working variables
+Dim I
+
+'*** Output Data Tables ***
+DataTable(non_ec_output,TRUE,-1)
+  DataInterval(0,OUTPUT_INTERVAL_NON_EC,min,-1) 'last var is max number of time stamps to add for lapses
+
+  Average(1,panel_temp,FP2,FALSE) 'FALSE here means do not disable
+  Minimum(1,batt_volt,FP2,FALSE,FALSE)
+  Average(1,rel_hum,FP2,FALSE)
+  Average(1,T,FP2,FALSE)
+  Totalize(1,rain,FP2,FALSE)
+  Average(1,wind_speed,FP2,FALSE) ' !!! Check me --- not sure if averaging is the right approach
+  Sample(1,wind_dir,FP2) ' remember, don't average a periodic variable
+  Average(1,tot_rad,FP2,False)
+  Average(1,dif_rad,FP2,False)
+  Average(1,cm3_up,FP2,False)
+  Average(1,cg3_up,FP2,False)
+  Average(1,cm3_down,FP2,False)
+  Average(1,cg3_down,FP2,False)
+  Average(1,par_up,FP2,False)
+  Average(1,par_down,FP2,False)
+  Average(1,cnr1_temp,FP2,False)
+EndTable
+
+BeginProg
+	Scan(SCAN_INTERVAL_EC,mSec,3,0)
+	 	If IfTime(0,SCAN_INTERVAL_NON_EC,Sec) Then 
+      PanelTemp(panel_temp,250)
+		  Battery(batt_volt)
+	    VoltSe(rel_hum,1,mV5000,REL_HUM_SE_CH,True,0,_50Hz,1,0)
+	    BrHalf4W(Rs_Ro,1,mV25,mV25,T_DIFF_CH,Vx2,1,2035,True,True,0,250,1.0,0)
+	    PRT(T,1,Rs_Ro,1.0,0)
+      PulseCount(rain,1,RAIN_PULSE_CH,2,0,1,0)
+      PulseCount(wind_speed,1,WIND_PULSE_CH,0,0,1.0,0) ' !!! Check me --- are high frequency counts what we want?
+      BrHalf(wind_dir,1,mV2500C,WIND_SE_CH,Vx1,1,2500,True,0,_50Hz,1.0,0)
+      VoltSe(tot_rad,1,mV2500,TOT_RAD_SE_CH,1,0,_50Hz,1.0,0)
+      VoltSe(dif_rad,1,mV2500,DIF_RAD_SE_CH,1,0,_50Hz,1.0,0)
+      ' !!! right now we have yellow in L, green in ground on 4WPB100 in diff ch 6, red and blue in h and L 
+      '     of diff ch 7; but not sure if this is right
+      ' !!! think it should be okay to reuse Rs_Ro as a working variable, but might be worth checking
+	    BrHalf4W(Rs_Ro,1,mV25,mV25,CNR1_T_DIFF_CH,Vx3,1,2035,True,True,0,250,1.0,0)
+	    PRT(cnr1_temp,1,Rs_Ro,1.0,0)
+      ' Multiplexer readings
+      PortSet(MUX_RST,1)
+      I = 1
+      SubScan(0,mSec,4)
+        PulsePort(MUX_CLK,10000)
+        VoltDiff(cnr1(I),1,mV250,MUX_DIFF_CH,True,0,_50Hz,1.0,0)
+        I = I + 1
+      NextSubScan
+      I = 1
+      SubScan(0,mSec,2)
+        PulsePort(MUX_CLK,10000)
+        VoltDiff(par(I),1,mV25,MUX_DIFF_CH,True,0,_50Hz,1.0,0)
+        I = I + 1
+      NextSubScan
+      PortSet(MUX_RST,0)
+      CallTable(non_ec_output)
+	 	EndIf 
+  NextScan
+EndProg

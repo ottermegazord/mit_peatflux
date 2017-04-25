@@ -1,0 +1,230 @@
+'V4.2 Card out
+'v4 Based on v3, This add 4 more Moisture and Temperature sensor at multiplexer (By Ming Hui, 25 April 2012) 
+'v3: Change the heating time of heatflux plate from every three hours to every six hours, and last for three minutes.
+'v2: Based on 'singtel_300810_Alex.CR1. This add more sensors (soil heat flux plate, temperature probe, and moisture probe')
+'   to the AM16/32B multiplexer. (by Kai, May 18,2011) 
+
+'Data Logger: CR1000
+
+
+'PipeLineMode  I don't think PipeLineMode is an option for us because we need conditional execution
+
+'*** Constants ***
+Const SCAN_INTERVAL_EC = 100			  '100 mSec=10Hz, eddy covariance
+Const SCAN_INTERVAL_NON_EC = 10     'measurement interval in seconds for other instruments
+Const OUTPUT_INTERVAL_NON_EC = 1    'output interval in minutes for other instruments
+Const CSAT3_AZIMUTH = 0			'Unique value.
+Const SDM_PER = 30				'Default SDM clock speed.
+
+'** Port assignments **
+Const REL_HUM_SE_CH = 1 'number of SE channel on CR1000
+Const WIND_SE_CH = 2    'number of SE channel on CR1000
+Const T_DIFF_CH = 2     'number of Diff channel on CR1000
+Const TOT_RAD_SE_CH = 7 'number of SE channel on CR1000
+Const DIF_RAD_SE_CH = 8 'number of SE channel on CR1000
+Const MUX_DIFF_CH = 5   'number of Diff channel on CR1000
+Const CNR1_T_DIFF_CH = 6'number of Diff channel on CR1000
+Const RAIN_PULSE_CH = 1 'number of Pulse channel on CR1000
+Const WIND_PULSE_CH = 2 'number of Pulse channel on CR1000
+Const MUX_RST = 4       'number of Control port on CR1000
+Const MUX_CLK = 5       'number of Control port on CR1000
+Const PA_uS_CH = 15     'number of SE channel on CR1000
+Const PA_uS_PO = 7      'number of Control port on CR1000
+Const MUX_SE_CH_1 = 9   'number of SE Channel on CR1000 Com Port Low(Multiplexer To CR1000)
+Const MUX_SE_CH_2= 10   'number of SE Channel on CR1000 Com Port Low(Multiplexer to CR1000)
+Const MUX_CON_PO = 6    'number of Control Port Channel on CR1000 (CS616)
+Const MUX_EXCITE = 2    'number of Excite Channel for CS107 On CR1000
+
+Const CSAT_OPT = INT (1000/SCAN_INTERVAL_EC)			'Compute CSAT3 Execution Parameter (10 or 20 Hz).
+                                                                                'CSAT3 variables with additional one or four scan delay.
+Public wind(10)					                                        'Wind, temperature, and diagnostic data from CSAT3.
+Alias wind(1) = Ux
+Alias wind(2) = Uy
+Alias wind(3) = Uz
+Alias wind(4) = C
+Alias wind(5) = diag_csat
+Alias wind(6) = Ux_2
+Alias wind(7) = Uy_2
+Alias wind(8) = Uz_2
+Alias wind(9) = C_2
+Alias wind(10) = diag_csat_2
+Units wind = m/s
+Units C = m/s
+Units C_2 = m/s
+Units diag_csat = unitless
+Units diag_csat_2 = unitless
+
+Public diag_bits(9)				'Warning flags.
+Alias diag_bits(1) = del_T_f		'Delta temperature warning Cflag.
+Alias diag_bits(2) = track_f		'Tracking (signal lock) warning flag.
+Alias diag_bits(3) = amp_h_f		'Amplitude warning high flag.
+Alias diag_bits(4) = amp_l_f		'Amplitude low warning flag.
+Alias diag_bits(5) = chopper_f	'Chopper warning flag.
+Alias diag_bits(6) = detector_f	'Detector warning flag.
+Alias diag_bits(7) = pll_f		'PLL warning flag.
+Alias diag_bits(8) = sync_f		'Synchronization warning flag.
+Alias diag_bits(9) = agc			'Automatic gain control.
+Units diag_bits = unitless
+
+Dim diag_csat_work As Long
+Dim diag_csat_work_2 As Long
+
+'Diagnostic variables.
+Dim disable_flag_on(4) As Boolean	'Intermediate processing disable flags.
+'disable_flag_on(1)				'TRUE when CSAT3 diagnostic warning flags are on or CSAT3 has no data.
+'disable_flag_on(2)				'TRUE when LI-7500 diagnostic warning flags are on or LI-7500 failed to send data.
+'disable_flag_on(3)				'TRUE when CSAT3 diagnostic warning flags are on.
+'                  				  Used to filter the sum of CSAT3 diagnostic warning flags.
+'disable_flag_on(4)				'TRUE when LI-7500 diagnostic warning flags are on.
+'                  				  Used to filter the sum of LI-7500 diagnostic warning flags.
+Dim n					'Number of samples in the online stats.
+Units n = samples
+
+Dim cov_disable_flag As Boolean	'TRUE when CSAT3 or LI-7500 reports bad 
+
+
+'*** Variables ***
+Public rain 'rain gauge (TR-525S)
+Units rain = tips
+
+Public rel_hum, Rs_Ro, T 'Relative Humidity and Temperature (HMP 155) 
+Units rel_hum = mV
+Units T = C
+
+Public wind_speed, wind_dir 'Wind speed and direction (Gill 12005D)
+Units wind_speed = pulses
+Units wind_dir = ratio
+
+Public cnr1_temp ' temperature (CNR1)
+Units cnr1_temp = C
+
+Public cnr1(4) 'pyranometer and pygeometer (CNR1)
+Alias cnr1(1) = cm3_up
+Alias cnr1(2) = cg3_up
+Alias cnr1(3) = cm3_down
+Alias cnr1(4) = cg3_down
+Units cm3_up = mV
+Units cg3_up = mV
+Units cm3_down = mV
+Units cg3_down = mV
+
+Public par(2) 'PAR sensor (LI-190)
+Alias par(1) = par_up
+Alias par(2) = par_down
+
+Public tot_rad, dif_rad 'Sunshine meter (BF3)
+Units tot_rad = mV
+Units dif_rad = mV
+
+Public batt_volt, panel_temp 'battery volt; panel temperature of CR1000
+Units batt_volt = V
+Units panel_temp = C
+
+Public soil_temp             'temperature of soil thermocouple proble (TCAV)
+Units soil_temp = C
+
+Public PA_uS, VWater          'period; water content fraction of TDR CS616
+Units PA_uS=uSec
+Units VWater=fraction
+Public VW(4)
+Public PA_uS_B(4)
+Units PA_uS_B=uSec
+Units VW = fraction
+
+Public T107_C(4)
+Units T107_C=Deg C
+
+
+
+Dim LCount_5
+
+Public VHeat(4) 'Soil heatflux plate (Hukseflux)
+Alias VHeat(1)=VHeat_cur 'dif voltage across the current sensing resistor of heatflux plate
+Alias VHeat(2)=VHeat_sen 'dif voltage of soil heatflux plate sensor
+Alias VHeat(3)=VHeat_cur2 'dif voltage across the current sensing resistor of heatflux plate
+Alias VHeat(4)=VHeat_sen2 'dif voltage of soil heatflux plate sensor
+Units VHeat_cur=mV
+Units VHeat_sen=mV
+Units VHeat_cur2=mV
+Units VHeat_sen2=mV
+
+' Working variables
+Dim I
+Dim P
+
+'*** Output Data Tables ***
+
+'Csat Raw Data
+DataTable (csat,TRUE,-1)
+  DataInterval(0,100,mSec,-1) 'last var is max number of time stamps to add for lapses
+  CardOut (0,-1)
+  Sample (1,Ux,IEEE4)
+  Sample (1,Uy,IEEE4)
+  Sample (1,Uz,IEEE4)
+  Sample (1,C,IEEE4)
+  Sample (1,diag_csat,IEEE4)
+EndTable
+
+'Csat_2 Raw Data
+DataTable (csat_2,TRUE,-1)
+  DataInterval(0,100,mSec,-1) 'last var is max number of time stamps to add for lapses
+  CardOut (0,-1)
+  Sample (1,Ux_2,IEEE4)
+  Sample (1,Uy_2,IEEE4)
+  Sample (1,Uz_2,IEEE4)
+  Sample (1,C_2,IEEE4)
+  Sample (1,diag_csat_2,IEEE4)
+EndTable
+
+BeginProg
+  Move (Ux,5,NaN,1)
+  SDMSpeed (SDM_PER)  
+	Scan(SCAN_INTERVAL_EC,mSec,3,0)
+	  CSAT3 (Ux,1,3,90,CSAT_OPT)
+	  'Define 61502 as NaN.
+			If ( diag_csat = NaN ) Then ( diag_csat = 61502 )
+			'Break up the four CSAT3 warning flags into four separate bits.
+			diag_csat_work= diag_csat
+			del_T_f = diag_csat_work AND &h8000
+			track_f= diag_csat_work AND &h4000
+			amp_h_f = diag_csat_work AND &h2000
+			amp_l_f = diag_csat_work AND &h1000
+			'Turn on the intermediate processing disable flag when any CSAT3 warning flag is
+			' high, including the special cases NaN (61502), a Lost Trigger (61440), No Data
+			' (61503), an SDM error (61441), or wrong CSAT3 embedded code (61442).
+			disable_flag_on(1) = diag_csat_work AND &hf000
+			'Turn on only when CSAT3 diagnostic warning flags are set.
+			disable_flag_on(3) = ( disable_flag_on(1) AND NOT (C = NaN) )
+			'Save the four most significant bits of the CSAT3 diagnostics, except for the
+			' special cases NaN (61502), a Lost Trigger (61440), No Data (61503), an SDM
+			' error (61441), or wrong CSAT3 embedded code (61442).
+			If ( diag_csat_work < &hf000 ) Then ( diag_csat = INT (diag_csat_work/&h1000) )
+    CallTable (csat) 
+    
+     CSAT3 (Ux_2,1,4,90,CSAT_OPT)
+	  'Define 61502 as NaN.
+			If ( diag_csat_2 = NaN ) Then ( diag_csat_2 = 61502 )
+			'Break up the four CSAT3 warning flags into four separate bits.
+			diag_csat_work_2 = diag_csat_2
+			del_T_f = diag_csat_work_2 AND &h8000
+			track_f = diag_csat_work_2 AND &h4000
+			amp_h_f = diag_csat_work_2 AND &h2000
+			amp_l_f = diag_csat_work_2 AND &h1000
+			'Turn on the intermediate processing disable flag when any CSAT3 warning flag is
+			' high, including the special cases NaN (61502), a Lost Trigger (61440), No Data
+			' (61503), an SDM error (61441), or wrong CSAT3 embedded code (61442).
+			disable_flag_on(1) = diag_csat_work_2 AND &hf000
+			'Turn on only when CSAT3 diagnostic warning flags are set.
+			disable_flag_on(3) = ( disable_flag_on(1) AND NOT (C_2 = NaN) )
+			'Save the four most significant bits of the CSAT3 diagnostics, except for the
+			' special cases NaN (61502), a Lost Trigger (61440), No Data (61503), an SDM
+			' error (61441), or wrong CSAT3 embedded code (61442).
+			If ( diag_csat_work_2 < &hf000 ) Then ( diag_csat_2 = INT (diag_csat_work_2/&h1000) )
+    CallTable (csat_2)
+  NextScan
+EndProg
+
+
+
+
+ 

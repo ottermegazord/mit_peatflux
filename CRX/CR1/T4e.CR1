@@ -1,0 +1,51 @@
+'CR1000 Series Datalogger
+'To create a different opening program template, type in new
+'instructions and select Template | Save as Default Template
+'date:
+'program author:Idaly
+'Wiring
+'Brown - Supply+ - ExCh1
+'Blue - Supply - Ground
+'White - signal + diff 1H
+'Thin Black - Signal - diff 1L
+'Thick Black shield =-ground
+
+'Declare Public Variables
+'Example:
+Public PTemp, batt_volt
+Public WP
+Units WP = kPa
+'Declare Other Variables
+'Example:
+'Dim Counter
+
+'Declare Constants
+'Example:
+'CONST PI = 3.141592654	
+
+'Define Data Tables
+DataTable (Test,1,1000)
+	DataInterval (0,1,Sec,10)
+	Minimum (1,batt_volt,FP2,0,False)
+	Sample (1,PTemp,FP2)
+	Sample (1,WP,FP2)
+EndTable
+
+'Define Subroutines
+'Sub
+	'EnterSub instructions here
+'EndSub
+
+'Main Program
+BeginProg
+	Scan (1,Sec,0,0)
+		PanelTemp (PTemp,250)
+		Battery (Batt_volt)
+		BrFull(WP,1,mV250,1,Vx1,1,2500,False,False,0,_60Hz,-10.6,0.0)
+		'Enter other measurement instructions
+		'Call Output Tables
+		'Example:
+		CallTable Test
+	NextScan
+EndProg
+

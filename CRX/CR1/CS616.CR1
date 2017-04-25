@@ -1,0 +1,84 @@
+
+'CR1000 Series Datalogger
+'To create a different opening program template, type in new
+'instructions and select Template | Save as Default Template
+'date:
+'program author:
+
+'Declare Public Variables
+'Example:
+Public PTemp, batt_volt
+Public Period (3)
+Public VWC (3)
+Public Flag (1)
+Dim I
+Public par, par2, par3
+Units par = mV
+Units par2 = mV
+Public WT1, WT2, WT3
+Units WT1 = kPa
+Units WT2 = kPa
+Units WT3 = kPa
+
+'Declare Other Variables
+'Example:
+'Dim Counter
+
+'Declare Constants
+'CS616 Default Calibration Constants
+Const a0 = -0.0663
+Const a1 = -0.0063
+Const a2 = 0.0007
+'Flag logic constants
+Const high = true
+Const low = false 
+
+'Define Data Tables
+DataTable (Test,1,-1)
+  CardOut(1,-1)
+	DataInterval (0,10,min,-1)
+	Minimum (1,batt_volt,FP2,0,False)
+	Sample (1,PTemp,FP2)
+	Sample (3,Period(),FP2)
+	Sample (3, VWC(), FP2)
+	Average(1,par,FP2,False)
+	Average(1,par2,FP2,False)
+	Sample (1,WT1,FP2)
+	Sample (1,WT2,FP2)
+	Sample (1,WT3,FP2)
+EndTable
+
+'Define Subroutines
+'Sub
+	'EnterSub instructions here
+'EndSub
+
+'Main Program
+BeginProg
+	Scan (10,min,0,0)
+		PanelTemp (PTemp,250)
+		Battery (Batt_volt)
+		VoltDiff(par,1,mV25,1,True,0,_50Hz,1.0,0)
+		VoltDiff(par2,1,mV25,2,True,0,_50Hz,1.0,0)
+		BrFull(WT1,1,mV250,3,VX1,1,2500,False,False,0,_60Hz,10.6,0.0)
+		BrFull(WT2,1,mV250,4,VX2,1,2500,False,False,0,_60Hz,10.6,0.0)
+		BrFull(WT3,1,mV250,7,VX3,1,2500,False,False,0,_60Hz,10.6,0.0)
+		'Enter other measurement instructions
+		
+		If IfTime (0,10,min) Then flag (1) = high
+		If Flag (1) = high Then
+		   'measure 4 CS616 probes on CR1000
+		   CS616(Period(1),3,9,7,4,1.0,0)
+		   '
+		   For I=1 To 3
+		     VWC(I)=a0 + a1*Period(I) + a2*Period(I)^2
+		   Next
+		   '
+		   flag(1) = low
+		  EndIf  
+		'Call Output Tables
+		'Example:
+		CallTable Test
+	NextScan
+EndProg
+

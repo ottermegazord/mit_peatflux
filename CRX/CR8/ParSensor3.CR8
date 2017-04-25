@@ -1,0 +1,52 @@
+'CR1000 Series Datalogger
+'To create a different opening program template, type in new
+'instructions and select Template | Save as Default Template
+'date:
+'program author:
+
+'Declare Public Variables
+'Example:
+Public PTemp, batt_volt
+
+Public par, par2, par3
+Units par = mV
+Units par2 = mV
+Units par3 = mV
+'Declare Other Variables
+'Example:
+'Dim Counter
+
+'Declare Constants
+'Example:
+'CONST PI = 3.141592654	
+
+'Define Data Tables
+'Define Subroutines
+DataTable (PAR,1,-1)
+	DataInterval (0,5,min,10)
+	Minimum (1,batt_volt,FP2,0,False)
+	Sample (1,PTemp,FP2)
+	Average(1,par,FP2,False)
+	Average(1,par2,FP2,False)
+	Average(1,par3,FP2,False)
+EndTable
+
+'Sub
+	'EnterSub instructions here
+'EndSub
+
+'Main Program
+BeginProg
+	Scan (1,sec,0,0)
+		PanelTemp (PTemp,250)
+		Battery (Batt_volt)
+		VoltDiff(par,1,mV25,1,True,0,_50Hz,1.0,0)
+		VoltDiff(par2,1,mV25,2,True,0,_50Hz,1.0,0)
+		VoltDiff(par3,1,mV25,3,True,0,_50Hz,1.0,0)
+		'Enter other measurement instructions
+		'Call Output Tables
+		'Example:
+		CallTable PAR
+	NextScan
+EndProg
+

@@ -3,6 +3,12 @@
 
 Welcome to the peatflux-code!
 
+# Add gpio-poweroff signal for TPL5110
+Step 1: Edit config.txt
+`sudo nano /boot/config.txt`
+Step 2: Add gpio-poweroff overlay at bottom of config.txt, where xx is DONE pin
+`dtoverlay=gpio-poweroff,gpiopin= xx`
+
 # Running a script as a service in Raspbian Jessie #
 
 Step 1: Define the service definition to run your script (e.g. yourscript.py)

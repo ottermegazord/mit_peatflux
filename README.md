@@ -291,7 +291,7 @@ Step 2: If there is error, re-run `sudo apt-get update` and `sudo apt-get upgrad
 Step 3: Try and start the gpsd service temporarily `sudo gpsd /dev/ttyAMA0 –n –F /var/run/gpsd.sock`<br>
 Step 4: run `cgps –s` and there should be an output. <br>
 
-#Configuring gpsd to auto-start<br>#
+# Configuring gpsd to auto-start<br> #
 Step 1: Run `sudo nano /etc/default/gpsd` and edit the file to GPSD_OPTIONS=”-n”, USBAUTO=”false” and DEVICE=”/dev/ttyAMA0”.<br>
 Step 2: If GPSD did not auto-start, run `sudo ln –s /lib/system/system/gpsd.service /etc/systemd/system/multi=user.targer.wants/<br>
 

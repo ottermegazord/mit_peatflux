@@ -295,7 +295,7 @@ Step 4: run `cgps –s` and there should be an output. <br>
 Step 1: Run `sudo nano /etc/default/gpsd` and edit the file to GPSD_OPTIONS=”-n”, USBAUTO=”false” and DEVICE=”/dev/ttyAMA0”.<br>
 Step 2: If GPSD did not auto-start, run `sudo ln –s /lib/system/system/gpsd.service /etc/systemd/system/multi=user.targer.wants/<br>
 
-# Raspbian Jessie system service fix <br>#
+# Raspbian Jessie system service fix <br> # 
 To disable gpsd system service run `sudo systemctl stop gpsd.socket` and `sudo systemctl disable gpsd.socket`<br>
 
 # Changes to your NTP configuration #

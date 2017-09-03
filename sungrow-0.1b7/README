@@ -1,10 +1,19 @@
-pysungrow version 0.1
+pysungrow version 0.2
 =====================
 
+version 0.1
 Copyright (c) 2012, 2013
 Alex Cobb
+
+version 0.2
+Copyright (c) 2017
+Idaly Ali, Alex Cobb
+
 All rights reserved.
 
+Fixes
+-------------------
+Program now ports to Debian Jessie
 
 License information
 -------------------

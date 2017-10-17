@@ -53,6 +53,8 @@ class Watlow(minimalmodbus.Instrument):
 
 if __name__ == '__main__':
     instrument = Watlow('/dev/tty.usbserial-FTYJRTZV', 1, 9600)
-
-    a = instrument.get_current_temperature()
-    print a
+    file = open('pywatlow.csv', 'a')
+    while 1:
+        file.write("%.10f, %.10f, %.10f\n" % (instrument.get_current_temperature(), instrument.get_closed_loop_setpoint(), instrument.get_heat_power()))
+    #a = instrument.get_current_temperature()
+        print ("%.10f, %.10f, %.10f\n" % (instrument.get_current_temperature(), instrument.get_closed_loop_setpoint(), instrument.get_heat_power()))

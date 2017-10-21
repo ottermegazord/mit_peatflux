@@ -3,6 +3,7 @@
 import minimalmodbus
 import struct
 import binascii
+import datetime
 
 __author__  = "Idaly Ali"
 __email__   = "idaly@mit..."
@@ -55,6 +56,6 @@ if __name__ == '__main__':
     instrument = Watlow('/dev/tty.usbserial-FTYJRTZV', 1, 9600)
     file = open('pywatlow.csv', 'a')
     while 1:
-        file.write("%.10f, %.10f, %.10f\n" % (instrument.get_current_temperature(), instrument.get_closed_loop_setpoint(), instrument.get_heat_power()))
-    #a = instrument.get_current_temperature()
-        print ("%.10f, %.10f, %.10f\n" % (instrument.get_current_temperature(), instrument.get_closed_loop_setpoint(), instrument.get_heat_power()))
+        dt = datetime.datetime.now()
+        file.write("%s,%s,%s,%s\n" % (dt, instrument.get_current_temperature(), instrument.get_closed_loop_setpoint(), instrument.get_heat_power()))
+        print ("%s,%s,%s,%s\n" % (dt, instrument.get_current_temperature(), instrument.get_closed_loop_setpoint(), instrument.get_heat_power()))
